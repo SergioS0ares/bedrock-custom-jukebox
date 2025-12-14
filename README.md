@@ -36,4 +36,4 @@ O projeto segue a estrutura padrão de desenvolvimento Bedrock:
 
 ### Clonando o repositório
 ```bash
-git clone [https://github.com/SEU-USUARIO/bedrock-custom-jukebox.git](https://github.com/SEU-USUARIO/bedrock-custom-jukebox.git)
+git clone [[https://github.com/SEU-USUARIO/bedrock-custom-jukebox.git](https://github.com/SEU-USUARIO/bedrock-custom-jukebox.git](https://github.com/SergioS0ares/bedrock-custom-jukebox.git))
