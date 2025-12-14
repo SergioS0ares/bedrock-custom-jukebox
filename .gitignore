@@ -1,0 +1,35 @@
+# Ignora ficheiros de log e IDE
+HELP.md
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.DS_Store
+
+# --- REGRAS DO BACKEND (TavolaApp) ---
+# (Assumindo que TavolaApp é um módulo ou está na raiz)
+
+# Pastas de Build do Java/Maven
+target/
+/bin/
+build/
+
+# Ficheiros do STS/Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# --- REGRAS DO FRONTEND (TavolaFront) ---
+# (O Git vai procurar por estas pastas dentro do subdiretório TavolaFront)
+
+TavolaFront/node_modules/
+TavolaFront/dist/
+TavolaFront/.angular/cache/
+
+# Ficheiros de cache do TypeScript
+*.tsbuildinfo
