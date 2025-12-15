@@ -1,0 +1,34 @@
+{
+    "format_version": 2,
+    "header": {
+        "name": "JukeboxPro BP",
+        "description": "Logica para a Jukebox Customizada",
+        "uuid": "e8334465-9831-4043-9828-568853683610",
+        "version": [1, 0, 0],
+        "min_engine_version": [1, 20, 0]
+    },
+    "modules": [
+        {
+            "type": "data",
+            "uuid": "14f2537c-3676-4700-9121-654859012345",
+            "version": [1, 0, 0]
+        },
+        {
+            "type": "script",
+            "language": "javascript",
+            "uuid": "9965237c-3676-4700-9121-654859998877",
+            "version": [1, 0, 0],
+            "entry": "scripts/main.js"
+        }
+    ],
+    "dependencies": [
+        {
+            "module_name": "@minecraft/server",
+            "version": "1.9.0"
+        },
+        {
+            "uuid": "b5224465-9831-4043-9828-568853683611",
+            "version": [1, 0, 0]
+        }
+    ]
+}
