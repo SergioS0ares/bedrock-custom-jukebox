@@ -1,119 +1,157 @@
 import os
 import json
-import shutil
 import zipfile
 import subprocess
+import shutil
 
-# --- Configurações ---
+# --- CONFIGURAÇÕES ---
+# Pega o diretório onde o script está rodando
 BASE_DIR = os.path.abspath(os.getcwd())
 NOME_ADDON = "JukeboxPro"
 
-# Pastas
+# Estrutura de pastas esperada
 PASTA_SOURCE = os.path.join(BASE_DIR, "addon_source")
 PASTA_MUSICA = os.path.join(BASE_DIR, "user_music")
 FFMPEG_EXE = os.path.join(BASE_DIR, "ffmpeg.exe")
 PASTA_CACHE_AUDIO = os.path.join(BASE_DIR, "_audio_cache_")
 
-# Template JS
+# Template do arquivo JavaScript (main.js)
+# Usamos player.dimension.runCommandAsync para evitar erros de contexto
 JS_TEMPLATE = """
 import { world, system } from "@minecraft/server";
+
+// Lista de IDs de música gerada automaticamente pelo Python
 const MUSIC_TRACKS = %MUSICAS_ARRAY%;
-world.beforeEvents.itemUseOn.subscribe((event) => {
-    const { source, itemStack, block } = event;
-    // IMPORTANTE: Verifique se o ID do bloco no jogo é igual a este abaixo:
+
+world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
+    const { player, block } = event;
+    
+    // Verifica se o bloco clicado é a nossa Jukebox
     if (block.typeId === "meu_addon:custom_jukebox") {
         const randomTrack = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)];
-        source.runCommandAsync(`playsound ${randomTrack} @a[r=20] ${block.location.x} ${block.location.y} ${block.location.z}`);
-        source.sendMessage(`§aTocando: ${randomTrack}`);
+        
+        // Toca o som para todos (@a) na posição do jogador
+        // O comando playsound usa coordenadas relativas (~)
+        player.runCommandAsync(`playsound ${randomTrack} @a ~ ~ ~ 10 1`);
+        
+        player.sendMessage(`§a[Jukebox] Tocando: ${randomTrack}`);
+        
+        // Cancela a interação para não abrir inventários (se houver)
+        event.cancel = true; 
     }
 });
 """
 
 def main():
-    print(f"--- Iniciando Build (Correção Final) ---")
+    print(f"--- INICIANDO BUILD JUKEBOX PRO ---")
 
-    if not os.path.exists(FFMPEG_EXE):
-        print("❌ FFMPEG não encontrado."); return
-    if not os.path.exists(PASTA_SOURCE):
-        print("❌ Pasta addon_source não encontrada."); return
-
-    # 1. Preparar Cache de Áudio
+    # 1. Limpeza de caches antigos
     if os.path.exists(PASTA_CACHE_AUDIO):
-        shutil.rmtree(PASTA_CACHE_AUDIO, ignore_errors=True)
-    os.makedirs(PASTA_CACHE_AUDIO, exist_ok=True)
+        shutil.rmtree(PASTA_CACHE_AUDIO)
+    os.makedirs(PASTA_CACHE_AUDIO)
 
-    # 2. Processar Músicas
+    # Preparar dicionários para o JSON
+    musicas_ids = []
+    sound_defs = {
+        "format_version": "1.14.0",
+        "sound_definitions": {}
+    }
+
+    contador = 0
+
+    # 2. Verificar pastas
     if not os.path.exists(PASTA_MUSICA):
         os.makedirs(PASTA_MUSICA)
-    
-    arquivos_musica = os.listdir(PASTA_MUSICA)
-    musicas_ids = []
-    sound_defs = {"format_version": "1.14.0", "sound_definitions": {}}
-    
-    print(f"--- Convertendo {len(arquivos_musica)} músicas ---")
-    
-    contador = 0
-    for arquivo in arquivos_musica:
-        caminho_origem = os.path.join(PASTA_MUSICA, arquivo)
-        nome_base = os.path.splitext(arquivo)[0]
-        caminho_convertido = os.path.join(PASTA_CACHE_AUDIO, f"{nome_base}.ogg")
-        
-        # CORREÇÃO 1: Mudado '-log_level' para '-loglevel'
-        comando = [FFMPEG_EXE, "-y", "-i", caminho_origem, "-vn", "-c:a", "libvorbis", "-loglevel", "error", caminho_convertido]
-        
-        valido = False
-        if arquivo.lower().endswith((".mp3", ".wav")):
-            print(f"Convertendo: {arquivo}")
-            result = subprocess.run(comando)
-            if result.returncode == 0:
-                valido = True
-            else:
-                print(f"❌ Erro ao converter {arquivo}")
-        elif arquivo.lower().endswith(".ogg"):
-            shutil.copy2(caminho_origem, caminho_convertido)
-            valido = True
-            
-        if valido:
-            id_som = f"custom.music.{contador}"
-            sound_defs["sound_definitions"][id_som] = {"category": "record", "sounds": [f"sounds/music/{nome_base}"]}
-            musicas_ids.append(id_som)
-            contador += 1
+        print(f"ERRO: Pasta '{PASTA_MUSICA}' não existia. Ela foi criada. Coloque seus MP3 lá e rode novamente.")
+        return
 
-    # 3. Criar o Arquivo .mcaddon
+    arquivos_musica = [f for f in os.listdir(PASTA_MUSICA) if f.lower().endswith(('.mp3', '.wav', '.ogg'))]
+    
+    if not arquivos_musica:
+        print(f"ERRO: Nenhum arquivo de música encontrado em '{PASTA_MUSICA}'.")
+        return
+
+    print(f"--- Encontradas {len(arquivos_musica)} músicas. Convertendo... ---")
+
+    # 3. Conversão de Áudio com FFMPEG
+    for arquivo in arquivos_musica:
+        nome_base = os.path.splitext(arquivo)[0]
+        # Limpa o nome (remove espaços e caracteres especiais para evitar bugs no Bedrock)
+        nome_limpo = "".join(c for c in nome_base if c.isalnum() or c in ('_')).lower()
+        
+        caminho_entrada = os.path.join(PASTA_MUSICA, arquivo)
+        nome_ogg = f"{nome_limpo}.ogg"
+        caminho_saida = os.path.join(PASTA_CACHE_AUDIO, nome_ogg)
+
+        print(f"Processando: {arquivo} -> {nome_ogg}")
+        
+        # COMANDOS ESSENCIAIS PARA O BEDROCK:
+        # -ar 44100: Força 44.1kHz (Obrigatório)
+        # -map_metadata -1: Remove capas de álbum que travam o som
+        try:
+            subprocess.run([
+                FFMPEG_EXE, 
+                '-y',                   # Sobrescrever sem perguntar
+                '-i', caminho_entrada,  # Arquivo de entrada
+                '-c:a', 'libvorbis',    # Codec OGG Vorbis
+                '-ar', '44100',         # Frequência obrigatória
+                '-ac', '2',             # Stereo (Use 1 para mono/3D)
+                '-map_metadata', '-1',  # Limpar metadados
+                caminho_saida
+            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            print(f"ERRO CRÍTICO: Falha ao converter {arquivo}. Verifique se o ffmpeg.exe está na pasta.")
+            return
+
+        # Adicionar ao JSON de definições
+        id_som = f"custom.music.{contador}"
+        
+        # IMPORTANTE: No JSON, o caminho NÃO tem extensão .ogg
+        sound_defs["sound_definitions"][id_som] = {
+            "category": "ui",  # "ui" ou "record"
+            "sounds": [f"sounds/music/{nome_limpo}"]
+        }
+        musicas_ids.append(id_som)
+        contador += 1
+
+    # 4. Gerar o script main.js dinamicamente
+    print("--- Gerando Script JS ---")
+    script_content = JS_TEMPLATE.replace("%MUSICAS_ARRAY%", json.dumps(musicas_ids))
+    
+    # Salvar main.js na pasta do Behavior Pack
+    path_scripts = os.path.join(PASTA_SOURCE, "BP", "scripts")
+    if not os.path.exists(path_scripts):
+        os.makedirs(path_scripts)
+        
+    with open(os.path.join(path_scripts, "main.js"), "w", encoding='utf-8') as f:
+        f.write(script_content)
+
+    # 5. Empacotar tudo no .mcaddon
     output_filename = os.path.join(BASE_DIR, f"{NOME_ADDON}.mcaddon")
-    print(f"--- Gerando arquivo: {NOME_ADDON}.mcaddon ---")
+    print(f"--- Criando arquivo final: {output_filename} ---")
     
     with zipfile.ZipFile(output_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        
-        # A) Adicionar arquivos originais (COM FILTRO PARA NÃO DUPLICAR)
+        # A) Copiar toda a estrutura da pasta addon_source
         for root, dirs, files in os.walk(PASTA_SOURCE):
             for file in files:
-                # CORREÇÃO 2: Pula arquivos que vamos gerar automaticamente
-                if file == "main.js" or file == "sound_definitions.json":
-                    continue
-                
                 caminho_real = os.path.join(root, file)
                 caminho_no_zip = os.path.relpath(caminho_real, PASTA_SOURCE)
                 zipf.write(caminho_real, caminho_no_zip)
 
-        # B) Injetar as músicas convertidas
+        # B) Adicionar as músicas convertidas na pasta correta (RP/sounds/music)
         for arquivo_ogg in os.listdir(PASTA_CACHE_AUDIO):
             caminho_real = os.path.join(PASTA_CACHE_AUDIO, arquivo_ogg)
             zipf.write(caminho_real, f"RP/sounds/music/{arquivo_ogg}")
 
-        # C) Injetar os arquivos gerados
-        zipf.writestr("RP/sound_definitions.json", json.dumps(sound_defs, indent=4))
-        
-        js_final = JS_TEMPLATE.replace("%MUSICAS_ARRAY%", json.dumps(musicas_ids))
-        zipf.writestr("BP/scripts/main.js", js_final)
+        # C) CORREÇÃO CRÍTICA: Adicionar sound_definitions.json DENTRO de RP/sounds/
+        # Se ficar na raiz do RP, o Minecraft ignora!
+        zipf.writestr("RP/sounds/sound_definitions.json", json.dumps(sound_defs, indent=4))
 
-    # Limpeza
-    try:
-        shutil.rmtree(PASTA_CACHE_AUDIO)
-    except:
-        pass
-
-    print(f"✅ SUCESSO TOTAL! Agora sim. Arquivo: {output_filename}")
+    print("\n--- SUCESSO! ---")
+    print(f"Arquivo gerado: {NOME_ADDON}.mcaddon")
+    print("1. Delete a versão antiga no Minecraft (Armazenamento > Pacotes).")
+    print("2. Instale este novo arquivo.")
+    print("3. Teste com o bloco ou use: /playsound custom.music.0 @s")
 
 if __name__ == "__main__":
     main()
