@@ -1,34 +1,58 @@
 {
     "format_version": 2,
     "header": {
-        "name": "JukeboxPro BP",
-        "description": "Logica para a Jukebox Customizada",
-        "uuid": "e8334465-9831-4043-9828-568853683610",
-        "version": [1, 0, 0],
-        "min_engine_version": [1, 20, 0]
+        "name": "Jukebox BP Final",
+        "description": "Com Stop on Break",
+        "uuid": "63c6b9c4-09a9-4450-b36a-328ce446395b",
+        "version": [
+            1,
+            0,
+            0
+        ],
+        "min_engine_version": [
+            1,
+            20,
+            80
+        ]
     },
     "modules": [
         {
             "type": "data",
-            "uuid": "14f2537c-3676-4700-9121-654859012345",
-            "version": [1, 0, 0]
+            "uuid": "ca5a2dfe-b74a-4cf2-9583-fd489ef31483",
+            "version": [
+                1,
+                0,
+                0
+            ]
         },
         {
             "type": "script",
             "language": "javascript",
-            "uuid": "9965237c-3676-4700-9121-654859998877",
-            "version": [1, 0, 0],
+            "uuid": "e840a859-491d-4950-9ee0-bbf8cf749c3a",
+            "version": [
+                1,
+                0,
+                0
+            ],
             "entry": "scripts/main.js"
         }
     ],
     "dependencies": [
-       {
-    "module_name": "@minecraft/server-ui",
-    "version": "1.2.0"
+        {
+            "module_name": "@minecraft/server",
+            "version": "1.11.0"
         },
         {
-            "uuid": "b5224465-9831-4043-9828-568853683611",
-            "version": [1, 0, 0]
+            "module_name": "@minecraft/server-ui",
+            "version": "1.2.0"
+        },
+        {
+            "uuid": "c2776f04-f755-4e46-a584-8ac7ae843a46",
+            "version": [
+                1,
+                0,
+                0
+            ]
         }
     ]
 }

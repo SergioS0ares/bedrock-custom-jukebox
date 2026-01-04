@@ -11,12 +11,23 @@
             "minecraft:destructible_by_mining": {
                 "seconds_to_destroy": 1.0
             },
+            
             "minecraft:geometry": "minecraft:geometry.full_block", 
+            
             "minecraft:material_instances": {
                 "*": {
                     "texture": "dirt", 
                     "render_method": "opaque"
                 }
+            },
+
+            "minecraft:selection_box": {
+                "origin": [-8, 0, -8],
+                "size": [16, 16, 16]
+            },
+            "minecraft:collision_box": {
+                "origin": [-8, 0, -8],
+                "size": [16, 16, 16]
             }
         }
     }

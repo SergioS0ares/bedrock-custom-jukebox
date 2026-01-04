@@ -1,17 +1,29 @@
 {
     "format_version": 2,
     "header": {
-        "name": "JukeboxPro RP",
-        "description": "Texturas e Sons para a Jukebox",
-        "uuid": "b5224465-9831-4043-9828-568853683611",
-        "version": [1, 0, 0],
-        "min_engine_version": [1, 20, 0]
+        "name": "Jukebox RP Final",
+        "description": "Sons Limitados a 64 Blocos",
+        "uuid": "c2776f04-f755-4e46-a584-8ac7ae843a46",
+        "version": [
+            1,
+            0,
+            0
+        ],
+        "min_engine_version": [
+            1,
+            20,
+            80
+        ]
     },
     "modules": [
         {
             "type": "resources",
-            "uuid": "c312537c-3676-4700-9121-654859012346",
-            "version": [1, 0, 0]
+            "uuid": "f017d60b-e314-48a6-8e8e-b6f80329307a",
+            "version": [
+                1,
+                0,
+                0
+            ]
         }
     ]
 }

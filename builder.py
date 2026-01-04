@@ -3,155 +3,232 @@ import json
 import zipfile
 import subprocess
 import shutil
+import uuid
 
 # --- CONFIGURAÇÕES ---
-# Pega o diretório onde o script está rodando
 BASE_DIR = os.path.abspath(os.getcwd())
-NOME_ADDON = "JukeboxPro"
+NOME_ADDON = "Jukebox_Final_Perfect"
 
-# Estrutura de pastas esperada
 PASTA_SOURCE = os.path.join(BASE_DIR, "addon_source")
 PASTA_MUSICA = os.path.join(BASE_DIR, "user_music")
 FFMPEG_EXE = os.path.join(BASE_DIR, "ffmpeg.exe")
 PASTA_CACHE_AUDIO = os.path.join(BASE_DIR, "_audio_cache_")
 
-# Template do arquivo JavaScript (main.js)
-# Usamos player.dimension.runCommandAsync para evitar erros de contexto
+# Estrutura
+SUBPASTA_AUDIO = "sounds/jukebox" 
+PASTA_DEFINICAO = "sounds"
+
+# --- JAVASCRIPT: AGORA COM DETECTOR DE QUEBRA DE BLOCO ---
 JS_TEMPLATE = """
 import { world, system } from "@minecraft/server";
+import { ActionFormData } from "@minecraft/server-ui";
 
-// Lista de IDs de música gerada automaticamente pelo Python
 const MUSIC_TRACKS = %MUSICAS_ARRAY%;
+// SEU ID (Verifique se bate com o jukebox.json)
+const BLOCK_ID = "meu_addon:custom_jukebox"; 
 
-world.beforeEvents.playerInteractWithBlock.subscribe((event) => {
-    const { player, block } = event;
-    
-    // Verifica se o bloco clicado é a nossa Jukebox
-    if (block.typeId === "meu_addon:custom_jukebox") {
-        const randomTrack = MUSIC_TRACKS[Math.floor(Math.random() * MUSIC_TRACKS.length)];
+// 1. EVENTO DE CLIQUE (Tocar Música)
+world.afterEvents.playerInteractWithBlock.subscribe((event) => {
+    const { block, player } = event;
+
+    if (block.typeId === BLOCK_ID) {
         
-        // Toca o som para todos (@a) na posição do jogador
-        // O comando playsound usa coordenadas relativas (~)
-        player.runCommandAsync(`playsound ${randomTrack} @a ~ ~ ~ 10 1`);
+        const form = new ActionFormData()
+            .title("Jukebox")
+            .body("Selecione o disco:");
+
+        for (const track of MUSIC_TRACKS) {
+            const name = track.split(".").pop().replace(/_/g, " ");
+            form.button("♫ " + name);
+        }
+        form.button("§c■ Parar Som");
+
+        system.run(() => {
+            form.show(player).then((response) => {
+                if (response.canceled) return;
+                
+                const selection = response.selection;
+
+                // Coordenadas formatadas
+                const x = block.location.x.toFixed(2);
+                const y = block.location.y.toFixed(2);
+                const z = block.location.z.toFixed(2);
+
+                // Para sons anteriores num raio de 64 blocos
+                player.dimension.runCommandAsync(`stopsound @a[x=${x},y=${y},z=${z},r=64]`);
+
+                if (selection === MUSIC_TRACKS.length) {
+                    player.sendMessage("§cSom parado.");
+                    return;
+                }
+
+                const track = MUSIC_TRACKS[selection];
+
+                // --- AJUSTE DE VOLUME E DISTÂNCIA ---
+                // Volume 4.0 no comando = Raio de aprox 64 blocos.
+                // Se passar disso, o som corta abruptamente ou fica inaudível.
+                const cmd = `playsound ${track} @a ${x} ${y} ${z} 4.0 1.0`;
+                
+                player.dimension.runCommandAsync(cmd);
+                player.sendMessage(`§aTocando: ${track}`);
+
+            }).catch(e => console.error(e));
+        });
+    }
+});
+
+// 2. EVENTO DE QUEBRA (Parar Música)
+world.afterEvents.playerBreakBlock.subscribe((event) => {
+    const { block, brokenBlockPermutation } = event;
+
+    // Verifica se o bloco quebrado era a nossa Jukebox
+    if (brokenBlockPermutation.type.id === BLOCK_ID) {
         
-        player.sendMessage(`§a[Jukebox] Tocando: ${randomTrack}`);
+        const x = block.location.x.toFixed(2);
+        const y = block.location.y.toFixed(2);
+        const z = block.location.z.toFixed(2);
+
+        // Manda parar qualquer som num raio pequeno (4 blocos) ao redor de onde o bloco estava
+        // Usamos executeCommand para garantir que pare para todos
+        block.dimension.runCommandAsync(`stopsound @a[x=${x},y=${y},z=${z},r=10]`);
         
-        // Cancela a interação para não abrir inventários (se houver)
-        event.cancel = true; 
+        // Mensagem opcional (pode remover se quiser)
+        // console.warn("Jukebox quebrada, som interrompido.");
     }
 });
 """
 
-def main():
-    print(f"--- INICIANDO BUILD JUKEBOX PRO ---")
+def verificar_ffmpeg():
+    if not os.path.exists(FFMPEG_EXE):
+        print("ERRO: ffmpeg.exe não encontrado.")
+        return False
+    return True
 
-    # 1. Limpeza de caches antigos
-    if os.path.exists(PASTA_CACHE_AUDIO):
-        shutil.rmtree(PASTA_CACHE_AUDIO)
-    os.makedirs(PASTA_CACHE_AUDIO)
+def gerar_manifests_novos():
+    uuid_bp = str(uuid.uuid4())
+    uuid_rp = str(uuid.uuid4())
+    uuid_script = str(uuid.uuid4())
 
-    # Preparar dicionários para o JSON
-    musicas_ids = []
-    sound_defs = {
-        "format_version": "1.14.0",
-        "sound_definitions": {}
+    # Manifest BP
+    bp_manifest = {
+        "format_version": 2,
+        "header": {
+            "name": "Jukebox BP Final",
+            "description": "Com Stop on Break",
+            "uuid": uuid_bp,
+            "version": [1, 0, 0],
+            "min_engine_version": [1, 20, 80]
+        },
+        "modules": [
+            { "type": "data", "uuid": str(uuid.uuid4()), "version": [1, 0, 0] },
+            { "type": "script", "language": "javascript", "uuid": uuid_script, "version": [1, 0, 0], "entry": "scripts/main.js" }
+        ],
+        "dependencies": [
+            { "module_name": "@minecraft/server", "version": "1.11.0" },
+            { "module_name": "@minecraft/server-ui", "version": "1.2.0" },
+            { "uuid": uuid_rp, "version": [1, 0, 0] }
+        ]
     }
 
-    contador = 0
+    # Manifest RP
+    rp_manifest = {
+        "format_version": 2,
+        "header": {
+            "name": "Jukebox RP Final",
+            "description": "Sons Limitados a 64 Blocos",
+            "uuid": uuid_rp,
+            "version": [1, 0, 0],
+            "min_engine_version": [1, 20, 80]
+        },
+        "modules": [
+            { "type": "resources", "uuid": str(uuid.uuid4()), "version": [1, 0, 0] }
+        ]
+    }
 
-    # 2. Verificar pastas
-    if not os.path.exists(PASTA_MUSICA):
-        os.makedirs(PASTA_MUSICA)
-        print(f"ERRO: Pasta '{PASTA_MUSICA}' não existia. Ela foi criada. Coloque seus MP3 lá e rode novamente.")
-        return
+    path_bp = os.path.join(PASTA_SOURCE, "BP")
+    path_rp = os.path.join(PASTA_SOURCE, "RP")
+    if not os.path.exists(path_bp): os.makedirs(path_bp)
+    if not os.path.exists(path_rp): os.makedirs(path_rp)
 
-    arquivos_musica = [f for f in os.listdir(PASTA_MUSICA) if f.lower().endswith(('.mp3', '.wav', '.ogg'))]
-    
-    if not arquivos_musica:
-        print(f"ERRO: Nenhum arquivo de música encontrado em '{PASTA_MUSICA}'.")
-        return
+    with open(os.path.join(path_bp, "manifest.json"), "w", encoding='utf-8') as f:
+        json.dump(bp_manifest, f, indent=4)
+    with open(os.path.join(path_rp, "manifest.json"), "w", encoding='utf-8') as f:
+        json.dump(rp_manifest, f, indent=4)
 
-    print(f"--- Encontradas {len(arquivos_musica)} músicas. Convertendo... ---")
+def main():
+    print("--- GERANDO VERSÃO PERFEITA ---")
+    if not verificar_ffmpeg(): return
+    if os.path.exists(PASTA_CACHE_AUDIO): shutil.rmtree(PASTA_CACHE_AUDIO)
+    os.makedirs(PASTA_CACHE_AUDIO)
 
-    # 3. Conversão de Áudio com FFMPEG
-    for arquivo in arquivos_musica:
-        nome_base = os.path.splitext(arquivo)[0]
-        # Limpa o nome (remove espaços e caracteres especiais para evitar bugs no Bedrock)
-        nome_limpo = "".join(c for c in nome_base if c.isalnum() or c in ('_')).lower()
+    gerar_manifests_novos()
+
+    lista_ids = []
+    sound_defs = { "format_version": "1.14.0", "sound_definitions": {} }
+
+    if not os.path.exists(PASTA_MUSICA): os.makedirs(PASTA_MUSICA)
+    files = [f for f in os.listdir(PASTA_MUSICA) if f.lower().endswith(('.mp3','.wav','.ogg','.m4a','.flac'))]
+
+    print(f"Processando {len(files)} arquivos...")
+
+    for f in files:
+        name_clean = os.path.splitext(f)[0].lower().replace(" ", "_")
+        name_clean = "".join([c for c in name_clean if c.isalnum() or c == "_"])
         
-        caminho_entrada = os.path.join(PASTA_MUSICA, arquivo)
-        nome_ogg = f"{nome_limpo}.ogg"
-        caminho_saida = os.path.join(PASTA_CACHE_AUDIO, nome_ogg)
+        src = os.path.join(PASTA_MUSICA, f)
+        dst = os.path.join(PASTA_CACHE_AUDIO, f"{name_clean}.ogg")
 
-        print(f"Processando: {arquivo} -> {nome_ogg}")
-        
-        # COMANDOS ESSENCIAIS PARA O BEDROCK:
-        # -ar 44100: Força 44.1kHz (Obrigatório)
-        # -map_metadata -1: Remove capas de álbum que travam o som
-        try:
-            subprocess.run([
-                FFMPEG_EXE, 
-                '-y',                   # Sobrescrever sem perguntar
-                '-i', caminho_entrada,  # Arquivo de entrada
-                '-c:a', 'libvorbis',    # Codec OGG Vorbis
-                '-ar', '44100',         # Frequência obrigatória
-                '-ac', '2',             # Stereo (Use 1 para mono/3D)
-                '-map_metadata', '-1',  # Limpar metadados
-                caminho_saida
-            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except subprocess.CalledProcessError:
-            print(f"ERRO CRÍTICO: Falha ao converter {arquivo}. Verifique se o ffmpeg.exe está na pasta.")
-            return
+        # MONO para 3D
+        subprocess.run([FFMPEG_EXE, '-y', '-i', src, '-vn', '-ac', '1', '-acodec', 'libvorbis', dst], 
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # Adicionar ao JSON de definições
-        id_som = f"custom.music.{contador}"
+        sound_id = f"custom.jukebox.{name_clean}"
+        lista_ids.append(sound_id)
         
-        # IMPORTANTE: No JSON, o caminho NÃO tem extensão .ogg
-        sound_defs["sound_definitions"][id_som] = {
-            "category": "ui",  # "ui" ou "record"
-            "sounds": [f"sounds/music/{nome_limpo}"]
+        path_in_json = f"{SUBPASTA_AUDIO}/{name_clean}"
+        
+        # --- CONFIGURAÇÃO DE DISTÂNCIA FIXA ---
+        # max_distance: 64.0 = Limite duro. Passou de 64 blocos, o som corta.
+        sound_defs["sound_definitions"][sound_id] = {
+            "category": "record", 
+            "min_distance": 4.0,
+            "max_distance": 64.0, 
+            "sounds": [
+                {
+                    "name": path_in_json, 
+                    "stream": True,
+                    "load_on_low_memory": True
+                }
+            ]
         }
-        musicas_ids.append(id_som)
-        contador += 1
+        print(f"Configurado: {sound_id}")
 
-    # 4. Gerar o script main.js dinamicamente
-    print("--- Gerando Script JS ---")
-    script_content = JS_TEMPLATE.replace("%MUSICAS_ARRAY%", json.dumps(musicas_ids))
+    path_sounds_root = os.path.join(PASTA_SOURCE, "RP", PASTA_DEFINICAO)
+    if not os.path.exists(path_sounds_root): os.makedirs(path_sounds_root)
     
-    # Salvar main.js na pasta do Behavior Pack
-    path_scripts = os.path.join(PASTA_SOURCE, "BP", "scripts")
-    if not os.path.exists(path_scripts):
-        os.makedirs(path_scripts)
-        
-    with open(os.path.join(path_scripts, "main.js"), "w", encoding='utf-8') as f:
-        f.write(script_content)
+    with open(os.path.join(path_sounds_root, "sound_definitions.json"), "w", encoding='utf-8') as f:
+        json.dump(sound_defs, f, indent=4)
 
-    # 5. Empacotar tudo no .mcaddon
-    output_filename = os.path.join(BASE_DIR, f"{NOME_ADDON}.mcaddon")
-    print(f"--- Criando arquivo final: {output_filename} ---")
-    
-    with zipfile.ZipFile(output_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        # A) Copiar toda a estrutura da pasta addon_source
-        for root, dirs, files in os.walk(PASTA_SOURCE):
+    path_js = os.path.join(PASTA_SOURCE, "BP/scripts")
+    if not os.path.exists(path_js): os.makedirs(path_js)
+    with open(os.path.join(path_js, "main.js"), "w", encoding='utf-8') as f:
+        f.write(JS_TEMPLATE.replace("%MUSICAS_ARRAY%", json.dumps(lista_ids)))
+
+    out = os.path.join(BASE_DIR, f"{NOME_ADDON}.mcaddon")
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
+        for root, _, files in os.walk(PASTA_SOURCE):
             for file in files:
-                caminho_real = os.path.join(root, file)
-                caminho_no_zip = os.path.relpath(caminho_real, PASTA_SOURCE)
-                zipf.write(caminho_real, caminho_no_zip)
+                abs_path = os.path.join(root, file)
+                rel_path = os.path.relpath(abs_path, PASTA_SOURCE)
+                z.write(abs_path, rel_path)
+        
+        for ogg in os.listdir(PASTA_CACHE_AUDIO):
+            path_zip = f"RP/{SUBPASTA_AUDIO}/{ogg}"
+            z.write(os.path.join(PASTA_CACHE_AUDIO, ogg), path_zip)
 
-        # B) Adicionar as músicas convertidas na pasta correta (RP/sounds/music)
-        for arquivo_ogg in os.listdir(PASTA_CACHE_AUDIO):
-            caminho_real = os.path.join(PASTA_CACHE_AUDIO, arquivo_ogg)
-            zipf.write(caminho_real, f"RP/sounds/music/{arquivo_ogg}")
-
-        # C) CORREÇÃO CRÍTICA: Adicionar sound_definitions.json DENTRO de RP/sounds/
-        # Se ficar na raiz do RP, o Minecraft ignora!
-        zipf.writestr("RP/sounds/sound_definitions.json", json.dumps(sound_defs, indent=4))
-
-    print("\n--- SUCESSO! ---")
-    print(f"Arquivo gerado: {NOME_ADDON}.mcaddon")
-    print("1. Delete a versão antiga no Minecraft (Armazenamento > Pacotes).")
-    print("2. Instale este novo arquivo.")
-    print("3. Teste com o bloco ou use: /playsound custom.music.0 @s")
+    print(f"--- SUCESSO! ---")
+    print(f"Arquivo gerado: {out}")
+    print("Teste: O som deve sumir após ~64 blocos e PARAR IMEDIATAMENTE ao quebrar o bloco.")
 
 if __name__ == "__main__":
     main()

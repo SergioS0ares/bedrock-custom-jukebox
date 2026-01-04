@@ -1,0 +1,41 @@
+{
+    "format_version": "1.14.0",
+    "sound_definitions": {
+        "custom.jukebox.grimm_hollow_knight_the_grimm_troupe__christopher_larkin_youtube": {
+            "category": "record",
+            "min_distance": 4.0,
+            "max_distance": 64.0,
+            "sounds": [
+                {
+                    "name": "sounds/jukebox/grimm_hollow_knight_the_grimm_troupe__christopher_larkin_youtube",
+                    "stream": true,
+                    "load_on_low_memory": true
+                }
+            ]
+        },
+        "custom.jukebox.mc_orsen__warning_speed_up_extended_mix__bass_boosted__rocky_tiktok_edit__olderbrotheradvice_youtube": {
+            "category": "record",
+            "min_distance": 4.0,
+            "max_distance": 64.0,
+            "sounds": [
+                {
+                    "name": "sounds/jukebox/mc_orsen__warning_speed_up_extended_mix__bass_boosted__rocky_tiktok_edit__olderbrotheradvice_youtube",
+                    "stream": true,
+                    "load_on_low_memory": true
+                }
+            ]
+        },
+        "custom.jukebox.musica1": {
+            "category": "record",
+            "min_distance": 4.0,
+            "max_distance": 64.0,
+            "sounds": [
+                {
+                    "name": "sounds/jukebox/musica1",
+                    "stream": true,
+                    "load_on_low_memory": true
+                }
+            ]
+        }
+    }
+}
