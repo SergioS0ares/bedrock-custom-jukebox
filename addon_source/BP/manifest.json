@@ -1,9 +1,9 @@
 {
     "format_version": 2,
     "header": {
-        "name": "Jukebox BP Final",
-        "description": "Com Stop on Break",
-        "uuid": "63c6b9c4-09a9-4450-b36a-328ce446395b",
+        "name": "Music Player BP",
+        "description": "V5 Fixed Icons",
+        "uuid": "90ae7caa-154b-487d-a58e-203e4b61e298",
         "version": [
             1,
             0,
@@ -11,14 +11,14 @@
         ],
         "min_engine_version": [
             1,
-            20,
-            80
+            21,
+            0
         ]
     },
     "modules": [
         {
             "type": "data",
-            "uuid": "ca5a2dfe-b74a-4cf2-9583-fd489ef31483",
+            "uuid": "de496f6f-1a57-4a89-87a8-68dd945b4ddb",
             "version": [
                 1,
                 0,
@@ -28,7 +28,7 @@
         {
             "type": "script",
             "language": "javascript",
-            "uuid": "e840a859-491d-4950-9ee0-bbf8cf749c3a",
+            "uuid": "366c88b3-64ef-45c5-ae4e-7b10c6c2d0fd",
             "version": [
                 1,
                 0,
@@ -40,14 +40,14 @@
     "dependencies": [
         {
             "module_name": "@minecraft/server",
-            "version": "1.11.0"
+            "version": "1.12.0"
         },
         {
             "module_name": "@minecraft/server-ui",
             "version": "1.2.0"
         },
         {
-            "uuid": "c2776f04-f755-4e46-a584-8ac7ae843a46",
+            "uuid": "62d11185-d4b1-4b46-bdd9-49583331703c",
             "version": [
                 1,
                 0,

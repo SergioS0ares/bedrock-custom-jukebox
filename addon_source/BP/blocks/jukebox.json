@@ -1,34 +1,27 @@
 {
-    "format_version": "1.20.80",
+    "format_version": "1.21.0",
     "minecraft:block": {
         "description": {
             "identifier": "meu_addon:custom_jukebox",
             "menu_category": {
-                "category": "items"
+                "category": "items",
+                "group": "itemGroup.name.items"
             }
         },
         "components": {
             "minecraft:destructible_by_mining": {
                 "seconds_to_destroy": 1.0
             },
-            
-            "minecraft:geometry": "minecraft:geometry.full_block", 
-            
+            "minecraft:geometry": "minecraft:geometry.full_block",
             "minecraft:material_instances": {
                 "*": {
-                    "texture": "dirt", 
+                    "texture": "minha_jukebox_txt",
                     "render_method": "opaque"
                 }
             },
-
-            "minecraft:selection_box": {
-                "origin": [-8, 0, -8],
-                "size": [16, 16, 16]
-            },
-            "minecraft:collision_box": {
-                "origin": [-8, 0, -8],
-                "size": [16, 16, 16]
-            }
+            "minecraft:custom_components": [
+                "meu_addon:jukebox_click"
+            ]
         }
     }
 }

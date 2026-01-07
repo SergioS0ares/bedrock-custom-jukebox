@@ -1,9 +1,9 @@
 {
     "format_version": 2,
     "header": {
-        "name": "Jukebox RP Final",
-        "description": "Sons Limitados a 64 Blocos",
-        "uuid": "c2776f04-f755-4e46-a584-8ac7ae843a46",
+        "name": "Music Player RP",
+        "description": "V5 Fixed Icons",
+        "uuid": "62d11185-d4b1-4b46-bdd9-49583331703c",
         "version": [
             1,
             0,
@@ -11,14 +11,14 @@
         ],
         "min_engine_version": [
             1,
-            20,
-            80
+            21,
+            0
         ]
     },
     "modules": [
         {
             "type": "resources",
-            "uuid": "f017d60b-e314-48a6-8e8e-b6f80329307a",
+            "uuid": "401db6b6-f9af-413d-a87b-bf1f4ca60828",
             "version": [
                 1,
                 0,
