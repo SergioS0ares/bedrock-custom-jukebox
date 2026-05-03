@@ -3,7 +3,7 @@
     "header": {
         "name": "Music Player RP",
         "description": "V5 Fixed Icons",
-        "uuid": "62d11185-d4b1-4b46-bdd9-49583331703c",
+        "uuid": "46278a6b-f43a-4e13-abd8-6201df091365",
         "version": [
             1,
             0,
@@ -18,7 +18,7 @@
     "modules": [
         {
             "type": "resources",
-            "uuid": "401db6b6-f9af-413d-a87b-bf1f4ca60828",
+            "uuid": "b380e31d-786c-40f3-b41b-e20b26689614",
             "version": [
                 1,
                 0,

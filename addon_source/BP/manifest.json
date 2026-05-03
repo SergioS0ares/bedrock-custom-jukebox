@@ -3,7 +3,7 @@
     "header": {
         "name": "Music Player BP",
         "description": "V5 Fixed Icons",
-        "uuid": "90ae7caa-154b-487d-a58e-203e4b61e298",
+        "uuid": "809c1414-4fbf-4b3d-a5fd-3badb92f6318",
         "version": [
             1,
             0,
@@ -18,7 +18,7 @@
     "modules": [
         {
             "type": "data",
-            "uuid": "de496f6f-1a57-4a89-87a8-68dd945b4ddb",
+            "uuid": "5eaedf93-9eda-4a45-a1af-9256a1209f98",
             "version": [
                 1,
                 0,
@@ -28,7 +28,7 @@
         {
             "type": "script",
             "language": "javascript",
-            "uuid": "366c88b3-64ef-45c5-ae4e-7b10c6c2d0fd",
+            "uuid": "070004b5-fdf2-44fd-8ad5-bc4469af9107",
             "version": [
                 1,
                 0,
@@ -47,7 +47,7 @@
             "version": "1.2.0"
         },
         {
-            "uuid": "62d11185-d4b1-4b46-bdd9-49583331703c",
+            "uuid": "46278a6b-f43a-4e13-abd8-6201df091365",
             "version": [
                 1,
                 0,

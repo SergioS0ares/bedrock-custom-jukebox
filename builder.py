@@ -15,18 +15,16 @@ PASTA_MUSICA = os.path.join(BASE_DIR, "user_music")
 FFMPEG_EXE = os.path.join(BASE_DIR, "ffmpeg.exe")
 FFPROBE_EXE = os.path.join(BASE_DIR, "ffprobe.exe")
 PASTA_CACHE_AUDIO = os.path.join(BASE_DIR, "_audio_cache_")
-
 # Caminhos internos
-SUBPASTA_AUDIO = "sounds/jukebox" 
+SUBPASTA_AUDIO = "sounds/jukebox"
 SUBPASTA_ICONES = "textures/jukebox_icons"
 PASTA_DEFINICAO = "sounds"
 
 MEU_BLOCO_ID = "meu_addon:custom_jukebox"
 NOME_DISPLAY_BLOCO = "Music Player Jukebox"
-CHAVE_TEXTURA = "minha_jukebox_txt" 
-COMPONENT_ID = "meu_addon:jukebox_click" 
+CHAVE_TEXTURA = "minha_jukebox_txt"
+COMPONENT_ID = "meu_addon:jukebox_click"
 
-# --- FUNÇÕES ---
 def criar_pasta_se_nao_existir(caminho):
     if not os.path.exists(caminho):
         try:
@@ -43,44 +41,65 @@ def salvar_arquivo_seguro(caminho_arquivo, conteudo, is_json=False):
             json.dump(conteudo, f, indent=4)
         else:
             f.write(conteudo)
-
-# --- JAVASCRIPT: ÍCONES CORRIGIDOS E TÍTULO NOVO ---
 JS_TEMPLATE = """
 import { world, system } from "@minecraft/server";
-import { ActionFormData } from "@minecraft/server-ui";
+import { ActionFormData, ModalFormData } from "@minecraft/server-ui";
 
-const PLAYLIST = %PLAYLIST_JSON%;
+const RAW_PLAYLIST = %PLAYLIST_JSON%;
 const BLOCK_ID = "%BLOCK_ID%";
 
-// Mapa de estado
+// Descobrir todas as playlists disponíveis
+const AVAILABLE_PLAYLISTS = [...new Set(RAW_PLAYLIST.map(t => t.playlist))];
+
 const activeJukeboxes = new Map();
+const globalController = { activePlaylist: AVAILABLE_PLAYLISTS[0] || "Geral", index: 0, playing: false, currentTrackId: null, startTime: 0, volume: 4.0 };
 
 function getState(block) {
     const key = `${block.location.x},${block.location.y},${block.location.z}`;
     if (!activeJukeboxes.has(key)) {
-        activeJukeboxes.set(key, { index: 0, playing: false, mode: "sequence", startTime: 0, volume: 4.0 });
+        activeJukeboxes.set(key, { 
+                index: 0, 
+                playing: false, 
+                mode: "sequence", 
+                startTime: 0, 
+                volume: 4.0,
+                currentTrackId: null,
+                activePlaylist: AVAILABLE_PLAYLISTS[0] || "Geral",
+                global: false
+            });
     }
     return activeJukeboxes.get(key);
 }
 
-function stopSound(dimension, x, y, z) {
+function getActiveTracks(playlistName) {
+    return RAW_PLAYLIST.filter(t => t.playlist === playlistName);
+}
+
+function stopSound(dimension, x, y, z, trackId) {
+    if (!trackId) return;
     const xF = x.toFixed(2);
     const yF = y.toFixed(2);
     const zF = z.toFixed(2);
-    dimension.runCommandAsync(`stopsound @a[x=${xF},y=${yF},z=${zF},r=64]`);
+    dimension.runCommandAsync(`stopsound @a[x=${xF},y=${yF},z=${zF},r=64] ${trackId}`);
 }
 
 function playTrack(block, index) {
     const state = getState(block);
-    if (index < 0) index = PLAYLIST.length - 1;
-    if (index >= PLAYLIST.length) index = 0;
+    const tracks = getActiveTracks(state.activePlaylist);
+    
+    if (tracks.length === 0) return;
+    if (index < 0) index = tracks.length - 1;
+    if (index >= tracks.length) index = 0;
 
-    const track = PLAYLIST[index];
+    const track = tracks[index];
     const x = block.location.x;
     const y = block.location.y;
     const z = block.location.z;
 
-    stopSound(block.dimension, x, y, z);
+    // Para a música anterior DESTE bloco, se houver
+    stopSound(block.dimension, x, y, z, state.currentTrackId);
+    // Se estiver em modo global, delega ao controlador global
+    if (state.global) { playGlobalTrack(block, index); return; }
     
     const xF = x.toFixed(2);
     const yF = y.toFixed(2);
@@ -91,28 +110,97 @@ function playTrack(block, index) {
 
     state.index = index;
     state.playing = true;
+    state.currentTrackId = track.id;
     state.startTime = new Date().getTime();
+}
+
+function stopOtherGlobal(block) {
+    const myKey = `${block.location.x},${block.location.y},${block.location.z}`;
+    for (const [key, st] of activeJukeboxes) {
+        if (key === myKey) continue;
+        if (st.global && st.currentTrackId) {
+            const coords = key.split(",").map(Number);
+            try {
+                const dim = world.getDimension("overworld");
+                dim.runCommandAsync(`stopsound @a[x=${coords[0].toFixed(2)},y=${coords[1].toFixed(2)},z=${coords[2].toFixed(2)},r=64] ${st.currentTrackId}`);
+            } catch (e) { }
+            st.playing = false;
+            st.currentTrackId = null;
+        }
+    }
 }
 
 function nextTrack(block) {
     const state = getState(block);
+    const tracks = getActiveTracks(state.activePlaylist);
     let nextIndex = 0;
+    
     if (state.mode === 'shuffle') {
-        nextIndex = Math.floor(Math.random() * PLAYLIST.length);
+        nextIndex = Math.floor(Math.random() * tracks.length);
     } else {
         nextIndex = state.index + 1;
-        if (nextIndex >= PLAYLIST.length) nextIndex = 0;
+        if (nextIndex >= tracks.length) nextIndex = 0;
     }
     playTrack(block, nextIndex);
 }
 
-// Loop Autoplay
+function playGlobalTrack(block, index) {
+    const state = getState(block);
+    const tracks = getActiveTracks(state.activePlaylist);
+    if (tracks.length === 0) return;
+    if (index < 0) index = tracks.length - 1;
+    if (index >= tracks.length) index = 0;
+
+    const track = tracks[index];
+    // Stop previous global track
+    if (globalController.currentTrackId) {
+        world.getDimension("overworld").runCommandAsync(`stopsound @a ${globalController.currentTrackId}`);
+    }
+    // Play new global track to all players
+    world.getDimension("overworld").runCommandAsync(`playsound ${track.id} @a 0 0 0 ${globalController.volume} 1.0`);
+
+    globalController.activePlaylist = state.activePlaylist;
+    globalController.index = index;
+    globalController.playing = true;
+    globalController.currentTrackId = track.id;
+    globalController.startTime = new Date().getTime();
+
+    // Update local state for this block
+    state.index = index;
+    state.playing = true;
+    state.currentTrackId = track.id;
+    state.startTime = globalController.startTime;
+}
+
+function nextGlobal() {
+    const playlist = globalController.activePlaylist;
+    const tracks = RAW_PLAYLIST.filter(t => t.playlist === playlist);
+    if (!tracks || tracks.length === 0) return;
+    let nextIndex = globalController.index + 1;
+    if (nextIndex >= tracks.length) nextIndex = 0;
+    // Find any block that is global to use as context (optional)
+    let block = null;
+    for (const [k, s] of activeJukeboxes) { if (s.global) { const coords = k.split(",").map(Number); try { block = world.getDimension("overworld").getBlock({ x: coords[0], y: coords[1], z: coords[2] }); break; } catch(e){} } }
+    if (block) playGlobalTrack(block, nextIndex);
+}
+
+function stopGlobal() {
+    if (!globalController.currentTrackId) return;
+    world.getDimension("overworld").runCommandAsync(`stopsound @a ${globalController.currentTrackId}`);
+    globalController.playing = false;
+    globalController.currentTrackId = null;
+}
+
 system.runInterval(() => {
     for (const [key, state] of activeJukeboxes) {
         if (state.playing) {
-            const track = PLAYLIST[state.index];
+            const tracks = getActiveTracks(state.activePlaylist);
+            const track = tracks[state.index];
+            if (!track) continue;
+            
             const now = new Date().getTime();
             const elapsedSeconds = (now - state.startTime) / 1000;
+            
             if (track.duration > 0 && elapsedSeconds > track.duration + 1) {
                 const coords = key.split(",").map(Number);
                 try {
@@ -125,7 +213,6 @@ system.runInterval(() => {
     }
 }, 20);
 
-// --- INTERFACE CORRIGIDA ---
 world.beforeEvents.worldInitialize.subscribe(initEvent => {
     initEvent.blockComponentRegistry.registerCustomComponent('%COMPONENT_ID%', {
         onPlayerInteract: (e) => {
@@ -133,33 +220,35 @@ world.beforeEvents.worldInitialize.subscribe(initEvent => {
             if (!player || player.isSneaking) return;
 
             const state = getState(block);
-            const currentTrack = PLAYLIST[state.index];
+            const tracks = getActiveTracks(state.activePlaylist);
+            const currentTrack = tracks[state.index];
             
             const form = new ActionFormData()
-                .title("§2Music Player") // Título alterado
+                .title("§2Music Player")
                 .body(
-                    `§fTocando agora:\\n` +
-                    `§a${state.playing ? "♫ " + currentTrack.name : "§7(Parado)"}\\n\\n` +
+                    `§fTocando agora:\n` +
+                    `§a${state.playing && currentTrack ? "♫ " + currentTrack.name : "§7(Parado)"}\n\n` +
+                    `§fPlaylist: §e${state.activePlaylist}\n` +
                     `§fModo: §7${state.mode === 'shuffle' ? "Aleatório" : "Sequência"}`
                 );
 
-            // Botões de Controle com Ícones de ITENS (Confiáveis)
             if (state.playing) {
-                // Pausar com Redstone (Vermelho)
                 form.button("§cPAUSAR", "textures/items/redstone_dust");
             } else {
-                // Tocar com Esmeralda (Verde)
                 form.button("§aTOCAR", "textures/items/emerald");
             }
             
-            // Próxima/Anterior com Flechas
             form.button("PRÓXIMA", "textures/items/arrow");
             form.button("ANTERIOR", "textures/items/arrow");
             
             const iconMode = state.mode === 'shuffle' ? "textures/items/redstone_dust" : "textures/items/repeater";
             form.button(`Modo: ${state.mode.toUpperCase()}`, iconMode);
 
+            const iconGlobal = state.global ? "textures/items/record_11" : "textures/items/record_13";
+            form.button(`Global: ${state.global ? 'ON' : 'OFF'}`, iconGlobal);
+
             form.button("§lBIBLIOTECA", "textures/items/book_writable");
+            form.button("§lMUDAR PLAYLIST", "textures/items/name_tag");
 
             system.run(() => {
                 form.show(player).then((res) => {
@@ -168,7 +257,7 @@ world.beforeEvents.worldInitialize.subscribe(initEvent => {
 
                     if (sel === 0) { 
                         if (state.playing) { 
-                            stopSound(block.dimension, block.location.x, block.location.y, block.location.z); 
+                            stopSound(block.dimension, block.location.x, block.location.y, block.location.z, state.currentTrackId); 
                             state.playing = false; 
                         } else { 
                             playTrack(block, state.index); 
@@ -181,24 +270,30 @@ world.beforeEvents.worldInitialize.subscribe(initEvent => {
                     }
                     else if (sel === 3) { 
                         state.mode = state.mode === 'sequence' ? 'shuffle' : 'sequence';
-                        player.sendMessage(`§aModo: ${state.mode}`);
+                        player.sendMessage(`§aModo alterado para: ${state.mode}`);
                     }
-                    else if (sel === 4) openListMenu(player, block);
+                    else if (sel === 4) { // Global toggle
+                        state.global = !state.global;
+                        player.sendMessage(`§aGlobal: ${state.global ? 'ON' : 'OFF'}`);
+                    }
+                    else if (sel === 5) openListMenu(player, block, state);
+                    else if (sel === 6) openPlaylistMenu(player, block, state);
                 }).catch(e => console.error(e));
             });
         }
     });
 });
 
-function openListMenu(player, block) {
-    const form = new ActionFormData().title("§2Biblioteca");
-    for (const t of PLAYLIST) {
+function openListMenu(player, block, state) {
+    const tracks = getActiveTracks(state.activePlaylist);
+    const form = new ActionFormData().title(`§2Biblioteca: ${state.activePlaylist}`);
+    
+    for (const t of tracks) {
         const m = Math.floor(t.duration / 60);
         const s = Math.floor(t.duration % 60);
         const timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
-        
         const icon = t.icon ? t.icon : "textures/items/record_13";
-        form.button(`§f${t.name}\\n§7${timeStr}`, icon);
+        form.button(`§f${t.name}\n§7${timeStr}`, icon);
     }
     system.run(() => {
         form.show(player).then(res => {
@@ -208,12 +303,36 @@ function openListMenu(player, block) {
     });
 }
 
+function openPlaylistMenu(player, block, state) {
+    const form = new ActionFormData().title("§2Escolher Playlist");
+    for (const p of AVAILABLE_PLAYLISTS) {
+        form.button(`§f${p}`, "textures/items/record_11");
+    }
+    system.run(() => {
+        form.show(player).then(res => {
+            if (res.canceled) return;
+            
+            if (state.playing) {
+                stopSound(block.dimension, block.location.x, block.location.y, block.location.z, state.currentTrackId);
+            }
+            
+            state.activePlaylist = AVAILABLE_PLAYLISTS[res.selection];
+            state.index = 0;
+            state.playing = false;
+            player.sendMessage(`§aPlaylist alterada para: ${state.activePlaylist}`);
+        });
+    });
+}
+
 world.afterEvents.playerBreakBlock.subscribe((event) => {
     const { block, brokenBlockPermutation } = event;
     if (brokenBlockPermutation.type.id === BLOCK_ID) {
         const key = `${block.location.x},${block.location.y},${block.location.z}`;
+        const state = activeJukeboxes.get(key);
+        if (state && state.currentTrackId) {
+            stopSound(event.player ? event.player.dimension : block.dimension, block.location.x, block.location.y, block.location.z, state.currentTrackId);
+        }
         activeJukeboxes.delete(key);
-        stopSound(event.player ? event.player.dimension : block.dimension, block.location.x, block.location.y, block.location.z);
     }
 });
 """
@@ -293,6 +412,27 @@ def gerar_arquivos_base():
     salvar_arquivo_seguro(os.path.join(PASTA_SOURCE, "BP", "manifest.json"), bp_manifest, is_json=True)
     salvar_arquivo_seguro(os.path.join(PASTA_SOURCE, "RP", "manifest.json"), rp_manifest, is_json=True)
 
+def gerar_recipe():
+    caminho_recipe = os.path.join(PASTA_SOURCE, "BP", "recipes", "jukebox_recipe.json")
+    recipe_json = {
+        "format_version": "1.21.0",
+        "minecraft:recipe_shaped": {
+            "description": { "identifier": f"{MEU_BLOCO_ID}_recipe" },
+            "tags": [ "crafting_table" ],
+            "pattern": [
+                "PPP",
+                "PDP",
+                "PPP"
+            ],
+            "key": {
+                "P": { "item": "minecraft:planks" },
+                "D": { "item": "minecraft:gold_nugget" }
+            },
+            "result": { "item": MEU_BLOCO_ID }
+        }
+    }
+    salvar_arquivo_seguro(caminho_recipe, recipe_json, is_json=True)
+
 def main():
     print("--- GERANDO MUSIC PLAYER V5 (ÍCONES FIXOS) ---")
     if not verificar_ferramentas(): return
@@ -306,50 +446,59 @@ def main():
 
     gerar_arquivos_base()
     gerar_lang()
-
+    gerar_recipe()
     playlist_data = []
     sound_defs = { "format_version": "1.14.0", "sound_definitions": {} }
 
     if not os.path.exists(PASTA_MUSICA): os.makedirs(PASTA_MUSICA, exist_ok=True)
-    files = [f for f in os.listdir(PASTA_MUSICA) if f.lower().endswith(('.mp3','.wav','.ogg','.m4a','.flac'))]
+    print("Processando faixas e playlists...")
 
-    print(f"Processando {len(files)} faixas...")
+    for root, dirs, files in os.walk(PASTA_MUSICA):
+        nome_pasta = os.path.basename(root)
+        if nome_pasta == os.path.basename(PASTA_MUSICA):
+            playlist_name = "Geral"
+            playlist_slug = "geral"
+        else:
+            playlist_name = nome_pasta.replace("_", " ").title()
+            playlist_slug = nome_pasta.lower().replace(" ", "_")
 
-    for f in files:
-        base_name = os.path.splitext(f)[0]
-        name_clean = "".join([c for c in base_name.lower().replace(" ", "_") if c.isalnum() or c == "_"])
-        
-        src = os.path.join(PASTA_MUSICA, f)
-        dst = os.path.join(PASTA_CACHE_AUDIO, f"{name_clean}.ogg")
-        subprocess.run([FFMPEG_EXE, '-y', '-i', src, '-vn', '-ac', '1', '-acodec', 'libvorbis', dst], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
-        icon_path = None
-        for ext in ['.png', '.jpg', '.jpeg']:
-            img_src = os.path.join(PASTA_MUSICA, base_name + ext)
-            if os.path.exists(img_src):
-                img_dst_name = f"{name_clean}.png"
-                img_dst_path = os.path.join(PASTA_SOURCE, "RP", "textures", "jukebox_icons", img_dst_name)
-                if ext == '.png':
-                    shutil.copy(img_src, img_dst_path)
-                else:
-                    subprocess.run([FFMPEG_EXE, '-y', '-i', img_src, img_dst_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                icon_path = f"textures/jukebox_icons/{name_clean}"
-                print(f"  [Capa encontrada para: {f}]")
-                break
+        arquivos_audio = [f for f in files if f.lower().endswith(('.mp3','.wav','.ogg','.m4a','.flac'))]
+        for f in arquivos_audio:
+            base_name = os.path.splitext(f)[0]
+            name_clean_base = "".join([c for c in base_name.lower().replace(" ", "_") if c.isalnum() or c == "_"])
+            name_clean = f"{playlist_slug}_{name_clean_base}" if playlist_slug != "geral" else name_clean_base
 
-        sound_id = f"custom.jukebox.{name_clean}"
-        playlist_data.append({ 
-            "id": sound_id, 
-            "name": base_name.replace("_", " ").title(), 
-            "duration": get_duration(src),
-            "icon": icon_path
-        })
-        
-        sound_defs["sound_definitions"][sound_id] = {
-            "category": "record", "min_distance": 4.0, "max_distance": 64.0, 
-            "sounds": [ { "name": f"{SUBPASTA_AUDIO}/{name_clean}", "stream": True, "load_on_low_memory": True } ]
-        }
-        print(f"OK: {f}")
+            src = os.path.join(root, f)
+            dst = os.path.join(PASTA_CACHE_AUDIO, f"{name_clean}.ogg")
+            subprocess.run([FFMPEG_EXE, '-y', '-i', src, '-vn', '-ac', '1', '-acodec', 'libvorbis', dst], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            icon_path = None
+            for ext in ['.png', '.jpg', '.jpeg']:
+                img_src = os.path.join(root, base_name + ext)
+                if os.path.exists(img_src):
+                    img_dst_name = f"{name_clean}.png"
+                    img_dst_path = os.path.join(PASTA_SOURCE, "RP", "textures", "jukebox_icons", img_dst_name)
+                    if ext == '.png':
+                        shutil.copy(img_src, img_dst_path)
+                    else:
+                        subprocess.run([FFMPEG_EXE, '-y', '-i', img_src, img_dst_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    icon_path = f"textures/jukebox_icons/{name_clean}"
+                    break
+
+            sound_id = f"custom.jukebox.{name_clean}"
+            playlist_data.append({ 
+                "id": sound_id, 
+                "name": base_name.replace("_", " ").title(), 
+                "duration": get_duration(src),
+                "icon": icon_path,
+                "playlist": playlist_name
+            })
+
+            sound_defs["sound_definitions"][sound_id] = {
+                "category": "record", "min_distance": 4.0, "max_distance": 64.0, 
+                "sounds": [ { "name": f"{SUBPASTA_AUDIO}/{name_clean}", "stream": True, "load_on_low_memory": True } ]
+            }
+            print(f"OK: {os.path.relpath(src, BASE_DIR)}")
 
     path_sounds = os.path.join(PASTA_SOURCE, "RP", PASTA_DEFINICAO, "sound_definitions.json")
     salvar_arquivo_seguro(path_sounds, sound_defs, is_json=True)
