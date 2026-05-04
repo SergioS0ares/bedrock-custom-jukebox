@@ -1,0 +1,106 @@
+<main class="container">
+  <mat-toolbar color="primary" class="topbar">
+    <div class="topbar-left">
+      <img class="logo-disc" [src]="imageUrls.disc" alt="disc" />
+      <span class="app-title">{{ t('title') }}</span>
+    </div>
+    <div class="topbar-right">
+      <button mat-stroked-button (click)="toggleLanguage()">{{ currentLang==='pt' ? 'EN' : 'PT' }}</button>
+    </div>
+  </mat-toolbar>
+
+  <div style="padding:16px; max-width:1100px; margin:0 auto;">
+    <mat-card>
+      <mat-card-title>{{ t('title') }}</mat-card-title>
+      <mat-card-content>
+        <div class="grid">
+          <div style="flex:1 1 360px">
+            <div class="panel">
+              <h3>{{ t('createPlaylists') }}</h3>
+              <div class="panel-body">
+                <input class="text-input" placeholder="{{ t('nameAddon') }}" [(ngModel)]="nomeAddon" />
+                <div class="playlist-box">
+                  <input placeholder="Playlist Name" #plname />
+                  <button mat-stroked-button (click)="addPlaylist();">{{ t('addPlaylist') }}</button>
+                </div>
+                <div class="drag-here">{{ t('dragHere') }}</div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h3>{{ t('browseFiles') }}</h3>
+              <div class="panel-body file-panel">
+                <img class="panel-icon" [src]="imageUrls.folder" alt="folder" />
+                <input type="file" multiple accept=".mp3,.ogg,.wav" (change)="onFileSelected($event)" />
+                <small class="note">{{ t('uploadNote') }}</small>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h3>{{ t('pasteYoutube') }}</h3>
+              <div class="panel-body">
+                <textarea rows="3" [(ngModel)]="youtubeLinksText" placeholder="https://youtube.com/...\nhttps://youtu.be/..."></textarea>
+                <div class="link-row">
+                  <label>{{ t('playlistForLinks') }}</label>
+                  <select [(ngModel)]="linkPlaylist">
+                    <option *ngFor="let p of playlists" [value]="p">{{p}}</option>
+                  </select>
+                  <button mat-flat-button color="primary" (click)="addYoutubeLink()">{{ t('addSong') }}</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
+              <div style="display:flex; gap:8px; align-items:center">
+                <label style="margin-right:8px">Playlist para os links</label>
+                <select [(ngModel)]="linkPlaylist">
+                  <option *ngFor="let p of playlists" [value]="p">{{p}}</option>
+                </select>
+                <button mat-flat-button color="primary" (click)="addYoutubeLink()">Adicionar link</button>
+              </div>
+            </div>
+
+            <div style="margin-top:12px">
+              <h4>Playlists</h4>
+              <div style="display:flex; gap:8px; align-items:center">
+                <div class="chip-list">
+                  <span *ngFor="let p of playlists" style="display:inline-flex;align-items:center;background:#eee;padding:4px 8px;border-radius:16px;margin-right:6px">
+                    {{p}}
+                    <button style="background:none;border:none;margin-left:6px;cursor:pointer" (click)="removePlaylist(p)" *ngIf="p!=='Geral'">✕</button>
+                  </span>
+                </div>
+                <button mat-stroked-button (click)="addPlaylist()">+ Nova playlist</button>
+              </div>
+            </div>
+
+            <div class="generate-area">
+              <button class="generate-btn" (click)="gerarAddon()" [disabled]="isCarregando || tracks.length===0">{{ t('generateAddon') }}</button>
+            </div>
+          </div>
+
+          <div class="tracks-panel">
+            <h3>{{ t('playlists') }}</h3>
+            <div class="tracks-list">
+              <div class="track" *ngFor="let t of tracks">
+                <img class="track-icon" [src]="t.type==='file' ? imageUrls.disc : imageUrls.youtube" />
+                <div class="track-info">
+                  <div class="track-title">{{t.type==='file'? (t.filename || '(arquivo)') : t.url}}</div>
+                  <div class="track-playlist">{{'Playlist:'}} 
+                    <select [(ngModel)]="t.playlist" (change)="setPlaylistForTrack(t.id, $any($event.target).value)">
+                      <option *ngFor="let p of playlists" [value]="p">{{p}}</option>
+                    </select>
+                  </div>
+                </div>
+                <button mat-icon-button color="warn" (click)="removeTrack(t.id)">✕</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+    <p style="text-align:center; margin-top:12px"><small>Frontend mínimo com Angular Material — conecta com backend FastAPI em <code>/api/build-addon</code>.</small></p>
+    <footer class="credits" style="text-align:center; margin-top:8px; font-size:12px; color:#bdbdbd">
+      Assets: <a href="https://kenney.nl/assets" target="_blank" rel="noopener">Kenney (CC0)</a> — thanks to Kenney for free assets.
+    </footer>
+  </div>
+</main>

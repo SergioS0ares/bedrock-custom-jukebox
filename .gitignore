@@ -4,3 +4,9 @@
 
 # Ignorar a pasta de build final (opcional, se não quiser versionar o executável do addon)
 build/
+
+# Node and Angular dev folders
+node_modules/
+.angular/cache/
+.angular/
+dist/

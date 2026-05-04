@@ -1,0 +1,5 @@
+/* Global styles used by Angular build */
+html, body { height:100%; margin:0; }
+body { background:#121212; color:#e6e6e6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+/* Ensure our component styles load */
+app-root { display:block; }
