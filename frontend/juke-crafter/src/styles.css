@@ -1,8 +1,19 @@
-/* Global styles used by Angular build */
-html, body { height:100%; margin:0; }
-body { background: #0f0f0f url('/assets/icons/bg-subtle.png') repeat; color:#e6e6e6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-/* Ensure our component styles load */
-app-root { display:block; }
+@import "@angular/material/prebuilt-themes/azure-blue.css";
 
-/* Provide a fallback subtle texture if the bg image is missing */
-body::after { content: ''; position: fixed; inset: 0; background-image: linear-gradient(transparent 0 50%, rgba(255,255,255,0.015) 50%); pointer-events:none; }
+html, body { height: 100%; margin: 0; padding: 0; }
+
+body {
+  background: #0a0a0a;
+  color: #e6e6e6;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+app-root { display: block; min-height: 100%; }
+
+* { box-sizing: border-box; }
+
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }

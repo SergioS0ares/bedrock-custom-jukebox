@@ -1,17 +1,10 @@
 import { Component } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatSelectModule } from '@angular/material/select';
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatRippleModule } from '@angular/material/core';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface TrackMeta {
   filename: string;
@@ -25,11 +18,12 @@ interface TrackMeta {
   styleUrls: ['./app.component.scss'],
   standalone: true,
   imports: [CommonModule, FormsModule, HttpClientModule,
-    MatToolbarModule, MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatSelectModule, MatListModule, MatIconModule, MatChipsModule]
+    MatRippleModule, MatSnackBarModule, MatTooltipModule]
 })
 export class AppComponent {
-  constructor(private http: HttpClient) { if (typeof window !== 'undefined') this.loadTracks(); }
+  constructor(private http: HttpClient, private snack: MatSnackBar) {
+    if (typeof window !== 'undefined') this.loadTracks();
+  }
 
   nomeAddon = 'Meu_Pacote_De_Musicas';
   arquivosSelecionados: File[] = [];
@@ -42,47 +36,94 @@ export class AppComponent {
   isCarregando = false;
   youtubeLinksText = '';
   linkPlaylist = 'Geral';
-  currentLang: 'pt' | 'en' = 'pt';
+  currentLang: 'pt' | 'en' = 'en';
+  navOpen = false;
 
-  // Default image URLs (can be replaced by any online pixel-art icons)
+  // Image URLs — drop your custom PNGs into src/assets/icons/ to override.
+  // If the file is missing, the inline SVG fallback in the template is used.
   imageUrls = {
-    disc: '/assets/icons/disc.png',
-    folder: '/assets/icons/folder.png',
-    youtube: '/assets/icons/youtube.png',
-    generateBadge: '/assets/icons/check.png'
+    logo:    '/assets/icons/logo-cube.png',
+    disc:    '/assets/icons/disc-vinyl.png',
+    folder:  '/assets/icons/folder-yellow.png',
+    youtube: '/assets/icons/youtube-icon.png'
   };
+
+  // Toggle to true once you have placed the custom images in /assets/icons/
+  useCustomImages = false;
 
   // Translations
   labels: any = {
     pt: {
-      title: 'Bedrock Jukebox Addon Maker',
-      howToUse: 'Como usar',
+      title: 'Criador de Addon de Jukebox Bedrock',
+      navHome: 'Início',
+      navMyAddons: 'Meus Addons',
+      navCommunity: 'Comunidade',
+      navSupport: 'Suporte',
+      aboutTitle: 'Sobre e Primeiros Passos',
+      howToUse: 'Como Usar',
+      howToInstall: 'Como Instalar',
+      installLine1: 'Basta baixar o arquivo .mcaddon gerado e dar duplo clique.',
+      installLine2: 'O Minecraft Bedrock Edition vai importar automaticamente seu pacote de jukebox personalizado! É só clicar no arquivo.',
       createPlaylists: 'Criar Playlists',
-      addPlaylist: 'Adicionar playlist',
-      browseFiles: 'Procurar arquivos',
-      pasteYoutube: 'Colar links do YouTube',
-      addSong: 'Adicionar música',
+      uploadMp3s: 'Enviar MP3s',
+      browseFiles: 'Procurar Arquivos',
+      pasteYoutube: 'Colar Links do YouTube',
+      addPlaylist: 'Adicionar Playlist',
+      addSong: 'Adicionar Música',
       generateAddon: 'GERAR MOD (.mcaddon)',
-      uploadNote: 'Formato suportado: .mp3/.ogg/.wav (até 50MB por arquivo)',
+      generating: 'Gerando...',
+      uploadNote: 'Formato suportado: .mp3 (até 50MB por arquivo)',
       playlistForLinks: 'Playlist para os links',
       playlists: 'Playlists',
+      tracks: 'Faixas',
       dragHere: 'Arraste as faixas aqui',
-      nameAddon: 'Nome do Addon'
+      nameAddon: 'Nome do Addon',
+      playlistName: 'Nome da Playlist',
+      youtubeUrl: 'Cole a URL do vídeo do YouTube...',
+      youtubeNote: '*Links do YouTube são processados automaticamente.*',
+      uploadOrPaste: 'Envie MP3s ou cole links do YouTube',
+      nameTracks: 'Nomeie suas faixas',
+      clickGenerate: 'Clique em "Gerar Mod"',
+      footer: '© Criador de Addon de Jukebox 2024',
+      noTracksAlert: 'Adicione pelo menos uma faixa ou link.',
+      generateError: 'Falha ao gerar o addon. Confira o console.',
+      generateSuccess: 'Addon gerado com sucesso!'
     },
     en: {
       title: 'Bedrock Jukebox Addon Maker',
+      navHome: 'Home',
+      navMyAddons: 'My Addons',
+      navCommunity: 'Community',
+      navSupport: 'Support',
+      aboutTitle: 'About & Getting Started',
       howToUse: 'How to Use',
+      howToInstall: 'How to Install',
+      installLine1: 'Simply download your generated .mcaddon file and double-click it.',
+      installLine2: 'Minecraft Bedrock Edition will automatically import your custom jukebox pack! Just click the file.',
       createPlaylists: 'Create Playlists',
-      addPlaylist: 'Add Playlist',
+      uploadMp3s: 'Upload MP3s',
       browseFiles: 'Browse Files',
       pasteYoutube: 'Paste YouTube Links',
+      addPlaylist: 'Add Playlist',
       addSong: 'Add Song',
       generateAddon: 'GENERATE MOD (.mcaddon)',
-      uploadNote: 'Supported: .mp3/.ogg/.wav (up to 50MB/file)',
+      generating: 'Generating...',
+      uploadNote: 'Supported format: .mp3 (Max 50MB per file)',
       playlistForLinks: 'Playlist for links',
       playlists: 'Playlists',
+      tracks: 'Tracks',
       dragHere: 'Drag tracks here',
-      nameAddon: 'Addon Name'
+      nameAddon: 'Addon Name',
+      playlistName: 'Playlist Name',
+      youtubeUrl: 'Paste YouTube Video URL...',
+      youtubeNote: '*YouTube links are automatically processed.*',
+      uploadOrPaste: 'Upload MP3s or paste YouTube links',
+      nameTracks: 'Name your tracks',
+      clickGenerate: 'Click "Generate Mod"',
+      footer: '© Jukebox Addon Maker 2024',
+      noTracksAlert: 'Add at least one track or link.',
+      generateError: 'Failed to generate addon. Check the console.',
+      generateSuccess: 'Addon generated successfully!'
     }
   };
 
@@ -139,11 +180,10 @@ export class AppComponent {
     } catch (e) { console.warn('Failed to load tracks', e); }
   }
 
-  addPlaylist() {
-    const name = prompt('Nome da nova playlist:');
-    if (!name) return;
-    const slug = name.trim();
-    if (slug && !this.playlists.includes(slug)) this.playlists.push(slug);
+  addPlaylist(name?: string) {
+    const raw = (name ?? prompt('Playlist name:') ?? '').trim();
+    if (!raw) return;
+    if (!this.playlists.includes(raw)) this.playlists.push(raw);
   }
 
   removePlaylist(name: string) {
@@ -154,8 +194,12 @@ export class AppComponent {
     this.saveTracks();
   }
 
+  private toast(msg: string, action = 'OK', ms = 3500) {
+    this.snack.open(msg, action, { duration: ms, panelClass: ['mc-snack'] });
+  }
+
   gerarAddon() {
-    if (this.tracks.length === 0) { alert('Adicione pelo menos uma faixa ou link.'); return; }
+    if (this.tracks.length === 0) { this.toast(this.t('noTracksAlert')); return; }
 
     this.isCarregando = true;
     const formData = new FormData();
@@ -186,10 +230,11 @@ export class AppComponent {
         link.click();
         window.URL.revokeObjectURL(url);
         this.isCarregando = false;
+        this.toast(this.t('generateSuccess'));
       },
       error: (err) => {
         console.error('Erro ao gerar o Addon:', err);
-        alert('Falha ao processar as músicas. Veja o console.');
+        this.toast(this.t('generateError'));
         this.isCarregando = false;
       }
     });

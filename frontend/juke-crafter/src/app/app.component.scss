@@ -1,39 +1,790 @@
-:host { display:block; }
-.container { max-width:1200px; margin:16px auto; }
+:host { display: block; }
 
-/* Topbar */
-.topbar { background: #232323; color: #dfe6d8; box-shadow: 0 4px 0 rgba(0,0,0,0.6); border-bottom:4px solid #0a6b2e; }
-.topbar-left { display:flex; align-items:center; gap:12px; }
-.logo-disc { width:48px; height:48px; image-rendering: pixelated; }
-.app-title { font-weight:700; font-size:20px; color:#b6e6a0; text-shadow:2px 2px 0 rgba(0,0,0,0.8); }
+/* =============================================================
+   MINECRAFT GUI — Theme tokens
+   No glows, no blur, no neon. Solid pixel bevels only.
+   ============================================================= */
+$bg-page:         #2C1E16;   // dark brown Minecraft dirt base
+$bg-topbar:       #15100C;   // topbar / footer (almost black brown)
+$bg-panel:        #2A2A2A;   // panels / cards (dark gray to contrast with the green border)
+$bg-panel-inner:  #1A1A1A;   // inputs, drag-zone, tracks bg
+$border-moss:     #4A5E33;   // Minecraft moss/grass-dark green border (panels)
+$border-moss-dk:  #2D3A1F;   // even darker moss for inset shadow
+$border-moss-lt:  #6B8345;   // lighter moss for inset highlight
+$border-dark:     #1A1A1A;   // generic dark border
+$border-stud:     #0A0A0A;   // corner studs (riveted corners)
 
-/* Panels & cards */
-mat-card { background: linear-gradient(180deg,#2b2b2b 0%, #1f1f1f 100%); border:6px solid #0e4f21; box-shadow: 6px 6px 0 rgba(0,0,0,0.8); }
-.grid { display:flex; gap:18px; align-items:flex-start; }
-.panel { background: linear-gradient(180deg,#26322a,#1b221a); border:4px solid #3b7b3f; padding:12px; margin-bottom:12px; box-shadow: inset 0 -6px 0 rgba(0,0,0,0.35); }
-.panel h3 { margin:0 0 8px 0; color:#dfe6d8; font-weight:700; text-shadow:1px 1px 0 rgba(0,0,0,0.6); }
-.panel-body { padding:8px; }
-.panel-icon { width:48px; height:48px; image-rendering: pixelated; margin-right:8px; }
+$text:            #FFFFFF;
+$text-dim:        #C8C8C8;
+$text-muted:      #9A9A9A;
+$text-green:      #A7F070;   // bright pixel-green for subtitles
 
-.text-input, textarea, select { width:100%; padding:8px; border:2px solid #4a7f45; background:#151815; color:#e6f7df; border-radius:4px; }
-.drag-here { border:2px dashed #4a7f45; padding:16px; text-align:center; color:#b6e6a0; margin-top:8px; }
+/* Minecraft button — GREEN palette (vibrant) */
+$btn-green:       #4FAB2F;   // base green (more vibrant)
+$btn-green-light: #6DCB47;   // highlight (top/left)
+$btn-green-dark:  #2A6B18;   // shadow (bottom/right)
+$btn-green-darker:#163A0C;   // outer outline
 
-.tracks-panel { width:380px; background:linear-gradient(180deg,#2a2a2a,#181818); border:4px solid #3b7b3f; padding:12px; }
-.tracks-list { max-height:520px; overflow:auto; }
-.track { display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid rgba(255,255,255,0.03); }
-.track-icon { width:44px; height:44px; image-rendering: pixelated; }
-.track-title { font-weight:600; color:#f0f7e9; }
-.track-playlist select { width:auto; display:inline-block; margin-left:6px; }
+/* Smaller green button for secondary actions */
+$btnS-green:      #3C8527;
+$btnS-green-light:#52A635;
+$btnS-green-dark: #234A15;
 
-.generate-area { text-align:center; margin-top:12px; }
-.generate-btn { background: linear-gradient(180deg,#6cc24d,#3aa231); color:#072100; font-weight:900; padding:14px 30px; font-size:20px; border:6px solid #114b18; box-shadow: 6px 6px 0 rgba(0,0,0,0.6); border-radius:10px; cursor:pointer; }
-.generate-btn:disabled { opacity:0.6; cursor:not-allowed; }
+/* Gray fallback (kept for lang button) */
+$btn-gray:        #6E6E6E;
+$btn-gray-light:  #9A9A9A;
+$btn-gray-dark:   #2F2F2F;
 
-/* Footer */
-.credits a { color:#bde9a6; text-decoration:underline; }
+$font-pixel: 'Press Start 2P', system-ui, monospace;
+$font-retro: 'VT323', 'Press Start 2P', monospace;
 
-/* Small screens */
+/* =============================================================
+   PAGE / GLOBAL BACKGROUND
+   ============================================================= */
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: $text;
+  background-color: $bg-page;
+
+  /* === DIRT TEXTURE TILING ===
+     To use a real Minecraft dirt tile, drop a 16x16 PNG into
+     src/assets/textures/dirt-bg.png and UNCOMMENT the line below:
+
+     background-image: url('/assets/textures/dirt-bg.png');
+     background-repeat: repeat;
+     background-size: 64px 64px;          // scale up the 16x16 tile
+
+     The block of code BELOW is a CSS-only fallback that simulates
+     a dirt-like pebbled texture until the real PNG is added.        */
+  background-image:
+    /* small dark pebbles */
+    radial-gradient(circle at 15% 22%, rgba(0,0,0,0.30) 1.5px, transparent 2px),
+    radial-gradient(circle at 72% 18%, rgba(0,0,0,0.25) 1.5px, transparent 2px),
+    radial-gradient(circle at 40% 60%, rgba(0,0,0,0.28) 1.5px, transparent 2px),
+    radial-gradient(circle at 88% 70%, rgba(0,0,0,0.22) 1.5px, transparent 2px),
+    radial-gradient(circle at 25% 88%, rgba(0,0,0,0.26) 1.5px, transparent 2px),
+    /* small lighter highlights */
+    radial-gradient(circle at 55% 30%, rgba(120,80,55,0.20) 1.5px, transparent 2px),
+    radial-gradient(circle at 30% 50%, rgba(110,75,50,0.18) 1.5px, transparent 2px),
+    radial-gradient(circle at 78% 85%, rgba(120,80,55,0.20) 1.5px, transparent 2px),
+    /* fine grain */
+    repeating-linear-gradient(0deg,  rgba(0,0,0,0.05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.04) 0 1px, transparent 1px 4px),
+    /* base dirt gradient (subtle) */
+    linear-gradient(180deg, #3A2818 0%, #2C1E16 50%, #221610 100%);
+  background-size:
+    64px 64px, 64px 64px, 64px 64px, 64px 64px, 64px 64px,
+    64px 64px, 64px 64px, 64px 64px,
+    auto, auto, 100% 100%;
+  background-attachment: fixed;
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* =============================================================
+   TOPBAR
+   ============================================================= */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 32px;
+  background: $bg-topbar;
+  border-bottom: 2px solid $border-dark;
+  position: relative;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: $text;
+}
+.brand-cube { display: inline-flex; }
+.brand-cube svg,
+.brand-cube-img {
+  width: 44px;
+  height: 44px;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+.brand-text {
+  font-family: $font-pixel;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  color: #FFFFFF;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.nav { display: flex; align-items: center; gap: 24px; }
+
+.nav-link {
+  font-family: $font-retro;
+  font-size: 19px;
+  letter-spacing: 1px;
+  color: $text-dim;
+  text-decoration: none;
+  padding: 4px 2px;
+  text-shadow: 1px 1px 0 #000;
+}
+.nav-link:hover { color: $text; }
+.nav-link.active {
+  color: $text;
+  border-bottom: 2px solid $text-green;
+}
+
+/* Language toggle — small gray Minecraft button */
+.lang-btn {
+  font-family: $font-retro;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: $text;
+  background: $btn-gray;
+  border: 2px solid #000;
+  padding: 4px 12px;
+  cursor: pointer;
+  text-shadow: 1px 1px 0 #000;
+  border-radius: 0;
+  box-shadow:
+    inset 2px 2px 0 $btn-gray-light,
+    inset -2px -2px 0 $btn-gray-dark;
+  transition: background 0.1s;
+}
+.lang-btn:hover  { background: $btn-gray-light; }
+.lang-btn:active {
+  box-shadow:
+    inset 2px 2px 0 $btn-gray-dark,
+    inset -2px -2px 0 $btn-gray-light;
+}
+
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 28px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.nav-toggle span {
+  display: block;
+  height: 3px;
+  background: $text;
+}
+
+/* =============================================================
+   MC CARD (panel) — flat Minecraft GUI panel with corner studs
+   ============================================================= */
+.mc-card {
+  position: relative;
+  background: $bg-panel;
+  /* Outer black outline + inner moss-green border via box-shadow stack.
+     This gives the "double border" pixel-art panel look from the reference. */
+  border: 4px solid $border-moss;
+  outline: 2px solid #000;
+  outline-offset: 0;
+  padding: 22px 26px;
+  /* Inner highlight/shadow for a slight 3D feel (no blur) */
+  box-shadow:
+    inset 2px 2px 0 $border-moss-lt,
+    inset -2px -2px 0 $border-moss-dk;
+}
+
+/* Corner studs — small dark squares at the 4 corners (riveted look) */
+.mc-corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: $border-stud;
+  border: 1px solid #000;
+  pointer-events: none;
+  z-index: 2;
+}
+.mc-corner.tl { top: -5px;    left: -5px; }
+.mc-corner.tr { top: -5px;    right: -5px; }
+.mc-corner.bl { bottom: -5px; left: -5px; }
+.mc-corner.br { bottom: -5px; right: -5px; }
+
+/* =============================================================
+   TITLES
+   ============================================================= */
+.mc-title {
+  font-family: $font-pixel;
+  font-size: 14px;
+  color: #FFFFFF;
+  margin: 0 0 16px;
+  letter-spacing: 0.5px;
+  text-shadow: 2px 2px 0 #000;
+  line-height: 1.4;
+}
+.mc-title.centered { text-align: center; }
+
+/* The big centered title of the About card should be pixel-green */
+.about-card .mc-title.centered {
+  color: $text-green;
+  font-size: 16px;
+}
+
+.mc-subtitle {
+  font-family: $font-pixel;
+  font-size: 12px;
+  color: $text-green;
+  margin: 0 0 14px;
+  letter-spacing: 0.5px;
+  text-shadow: 2px 2px 0 #000;
+}
+
+/* =============================================================
+   ABOUT — How to Use / How to Install
+   ============================================================= */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+.steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-family: $font-retro;
+  font-size: 19px;
+  color: $text;
+  text-shadow: 1px 1px 0 #000;
+}
+.bullet {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border: 1px solid #000;
+}
+.bullet.b-green  { background: #4ADE80; }
+.bullet.b-red    { background: #EF4444; }
+.bullet.b-yellow { background: #FACC15; }
+.bullet.b-blue   { background: #38BDF8; }
+
+.about-text {
+  font-family: $font-retro;
+  font-size: 18px;
+  color: $text-dim;
+  margin: 0 0 10px;
+  line-height: 1.5;
+  text-shadow: 1px 1px 0 #000;
+}
+.about-text code {
+  background: $border-dark;
+  color: $text-green;
+  padding: 1px 6px;
+  font-family: $font-retro;
+}
+
+/* =============================================================
+   FEATURE CARDS ROW (Create / Upload / YouTube)
+   ============================================================= */
+.cards-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.feature-card {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+.feature-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+/* Icon placeholder — Minecraft "inventory slot" look (sunken bevel) */
+.feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  background: $bg-panel-inner;
+  border: 2px solid #000;
+  /* Sunken inset bevel — opposite of buttons */
+  box-shadow:
+    inset 2px 2px 0 rgba(0,0,0,0.5),
+    inset -2px -2px 0 rgba(255,255,255,0.08);
+}
+.feature-icon svg,
+.feature-icon img {
+  display: block;
+  width: 44px;
+  height: 44px;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+.feature-head .mc-title {
+  margin: 0;
+  font-size: 12px;
+  flex: 1;
+}
+
+.feature-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+/* =============================================================
+   INPUTS — sunken pixel field
+   ============================================================= */
+.mc-input {
+  width: 100%;
+  background: $bg-panel-inner;
+  border: 2px solid #000;
+  color: $text;
+  padding: 8px 10px;
+  font-size: 16px;
+  font-family: $font-retro;
+  letter-spacing: 0.5px;
+  outline: none;
+  border-radius: 0;
+  /* Inset sunken bevel */
+  box-shadow:
+    inset 2px 2px 0 rgba(0,0,0,0.5),
+    inset -1px -1px 0 rgba(255,255,255,0.08);
+}
+.mc-input::placeholder { color: $text-muted; }
+.mc-input:focus {
+  background: #1A1A1A;
+  border-color: #555;
+}
+.mc-input-sm { padding: 4px 8px; font-size: 14px; }
+
+select.mc-input {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, $text-dim 50%),
+    linear-gradient(135deg, $text-dim 50%, transparent 50%);
+  background-position: calc(100% - 14px) center, calc(100% - 8px) center;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
+  cursor: pointer;
+}
+select.mc-input option { background: $bg-panel-inner; color: $text; }
+
+.inline-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.inline-row .mc-input { flex: 1; }
+
+/* =============================================================
+   BUTTONS — Minecraft GREEN secondary (smaller scale of generate)
+   ============================================================= */
+.mc-btn {
+  font-family: $font-retro;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+  color: $text;
+  text-shadow: 1px 1px 0 #000;
+  background: $btnS-green;
+  border: 2px solid #000;
+  padding: 8px 14px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  /* Raised pixel bevel — light TL, dark BR (no blur) */
+  box-shadow:
+    inset 2px 2px 0 $btnS-green-light,
+    inset -2px -2px 0 $btnS-green-dark;
+  transition: background 0.1s;
+}
+.mc-btn:hover:not(:disabled)  { background: $btnS-green-light; }
+.mc-btn:active:not(:disabled) {
+  /* Pressed: invert bevel */
+  box-shadow:
+    inset 2px 2px 0 $btnS-green-dark,
+    inset -2px -2px 0 $btnS-green-light;
+}
+.mc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mc-btn-sm { padding: 6px 12px; font-size: 15px; }
+.mc-btn-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 18px;
+}
+
+/* Drag zone */
+.drag-zone {
+  border: 2px dashed #000;
+  background: rgba(0,0,0,0.25);
+  padding: 16px;
+  text-align: center;
+  font-family: $font-retro;
+  font-size: 17px;
+  color: $text-muted;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.note {
+  font-family: $font-retro;
+  font-size: 15px;
+  color: $text-muted;
+  margin: 0;
+  text-shadow: 1px 1px 0 #000;
+}
+.note.centered { text-align: center; }
+
+/* Chips (playlists) */
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: $bg-panel-inner;
+  border: 2px solid #000;
+  color: $text;
+  padding: 4px 10px;
+  font-family: $font-retro;
+  font-size: 15px;
+  text-shadow: 1px 1px 0 #000;
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.08),
+    inset -1px -1px 0 rgba(0,0,0,0.4);
+}
+.chip-x {
+  background: none;
+  border: none;
+  color: $text-muted;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  line-height: 1;
+}
+.chip-x:hover { color: #EF4444; }
+
+/* =============================================================
+   TRACKS LIST
+   ============================================================= */
+.tracks-section { padding: 20px; }
+.tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: $bg-panel-inner;
+  border: 2px solid #000;
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.06),
+    inset -1px -1px 0 rgba(0,0,0,0.4);
+}
+.track-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: $bg-panel;
+  border: 1px solid #000;
+}
+.track-info { flex: 1; min-width: 0; }
+.track-title {
+  font-family: $font-retro;
+  font-size: 17px;
+  color: $text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 1px 1px 0 #000;
+}
+.track-meta {
+  font-family: $font-retro;
+  font-size: 14px;
+  color: $text-muted;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.track-remove {
+  background: $btn-gray-dark;
+  border: 2px solid #000;
+  color: $text;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow:
+    inset 2px 2px 0 $btn-gray,
+    inset -2px -2px 0 #1A1A1A;
+}
+.track-remove:hover { background: $btn-gray; }
+
+/* =============================================================
+   GENERATE BUTTON — Classic Minecraft GREEN
+   ============================================================= */
+.generate-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 36px 0 18px;
+}
+
+.generate-btn {
+  font-family: $font-pixel;
+  font-size: 17px;
+  letter-spacing: 1.5px;
+  color: #FFFFFF;
+  text-shadow: 2px 2px 0 #000;
+
+  background: $btn-green;
+  border: 3px solid $btn-green-darker;
+  padding: 20px 50px;
+  cursor: pointer;
+  border-radius: 0;
+
+  /* Solid pixel bevel — light TL, dark BR (raised) */
+  box-shadow:
+    inset 3px 3px 0 $btn-green-light,
+    inset -3px -3px 0 $btn-green-dark;
+
+  transition: background 0.1s;
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+}
+.generate-btn:hover:not(:disabled) {
+  background: $btn-green-light;
+}
+.generate-btn:active:not(:disabled) {
+  /* Pressed = inverted bevel */
+  box-shadow:
+    inset 3px 3px 0 $btn-green-dark,
+    inset -3px -3px 0 $btn-green-light;
+}
+.generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =============================================================
+   SPARKLES — pixel-art star/plus around the generate button
+   (Coexist with .music-note — together they decorate the button)
+   ============================================================= */
+.sparkle {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  image-rendering: pixelated;
+  animation: twinkle 1.8s ease-in-out infinite;
+}
+.sparkle.sp1 { left:  calc(50% - 310px); top: 32px;    animation-delay: 0s;   }
+.sparkle.sp2 { left:  calc(50% - 150px); top: -6px;    animation-delay: 0.4s; }
+.sparkle.sp3 { right: calc(50% - 310px); top: 30px;    animation-delay: 0.2s; }
+.sparkle.sp4 { right: calc(50% - 150px); top: -10px;   animation-delay: 0.6s; }
+.sparkle.sp5 { left:  calc(50% - 90px);  bottom: -12px; animation-delay: 0.8s; }
+.sparkle.sp6 { right: calc(50% - 90px);  bottom: -10px; animation-delay: 1.0s; }
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(0.7); opacity: 0.55; }
+  50%      { transform: scale(1.1); opacity: 1; }
+}
+
+/* =============================================================
+   MUSIC NOTES (pixel-art) around the generate button
+   ============================================================= */
+.music-note {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  image-rendering: pixelated;
+  animation: float-note 2.4s ease-in-out infinite;
+}
+.music-note.n1 { left:  calc(50% - 260px); top: 6px;     animation-delay: 0s;   }
+.music-note.n2 { left:  calc(50% - 200px); bottom: -4px; animation-delay: 0.6s; }
+.music-note.n3 { right: calc(50% - 260px); top: 10px;    animation-delay: 0.3s; }
+.music-note.n4 { right: calc(50% - 200px); bottom: -2px; animation-delay: 0.9s; }
+.music-note.n5 { left:  calc(50% - 14px);  top: -24px;   animation-delay: 1.2s; }
+
+@keyframes float-note {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+/* =============================================================
+   FOOTER
+   ============================================================= */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 16px 26px;
+  color: $text-muted;
+  font-family: $font-retro;
+  font-size: 16px;
+  background: $bg-topbar;
+  border-top: 2px solid $border-dark;
+  text-shadow: 1px 1px 0 #000;
+}
+.footer a { color: $text-green; text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+.footer-repo {
+  font-family: $font-retro;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+}
+.footer-sep { opacity: 0.5; }
+
+/* =============================================================
+   MATERIAL OVERRIDES — snackbar, tooltip, ripple
+   ============================================================= */
+::ng-deep .mc-snack .mdc-snackbar__surface {
+  background: $bg-panel !important;
+  border: 2px solid #000 !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.08),
+    inset -1px -1px 0 rgba(0,0,0,0.5) !important;
+}
+::ng-deep .mc-snack .mdc-snackbar__label {
+  color: $text !important;
+  font-family: $font-retro !important;
+  font-size: 17px !important;
+}
+::ng-deep .mc-snack .mat-mdc-snack-bar-action .mdc-button__label {
+  color: $text-green !important;
+  font-family: $font-retro !important;
+}
+::ng-deep .mat-mdc-tooltip {
+  background: $bg-topbar;
+  color: $text;
+  border: 1px solid #000;
+  font-family: $font-retro;
+  font-size: 14px;
+  border-radius: 0;
+}
+/* Subtle white ripple (no more green glow) */
+::ng-deep .mc-btn .mat-ripple-element,
+::ng-deep .generate-btn .mat-ripple-element,
+::ng-deep .lang-btn .mat-ripple-element,
+::ng-deep .track-remove .mat-ripple-element {
+  background: rgba(255,255,255,0.16) !important;
+}
+
+/* =============================================================
+   RESPONSIVE — tablet
+   ============================================================= */
 @media (max-width: 980px) {
-  .grid { flex-direction:column; }
-  .tracks-panel { width:100%; }
+  .cards-row { grid-template-columns: 1fr 1fr; }
+  .about-grid { grid-template-columns: 1fr; gap: 20px; }
+  .content { padding: 22px 16px 48px; gap: 20px; }
+  .music-note.n1 { left:  calc(50% - 200px); }
+  .music-note.n2 { left:  calc(50% - 150px); }
+  .music-note.n3 { right: calc(50% - 200px); }
+  .music-note.n4 { right: calc(50% - 150px); }
+}
+
+/* =============================================================
+   RESPONSIVE — mobile
+   ============================================================= */
+@media (max-width: 720px) {
+  .topbar { padding: 12px 16px; flex-wrap: wrap; }
+  .brand-text { font-size: 10px; }
+  .brand-cube svg, .brand-cube-img { width: 36px; height: 36px; }
+  .nav-toggle { display: flex; }
+  .nav {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid $border-dark;
+    margin-top: 10px;
+  }
+  .nav.open { display: flex; }
+  .nav-link { padding: 6px 0; width: 100%; }
+  .lang-btn { width: 100%; padding: 8px; }
+
+  .cards-row { grid-template-columns: 1fr; gap: 16px; }
+  .mc-card { padding: 16px 14px; }
+  .feature-card { padding: 16px 14px; }
+  .feature-icon { width: 48px; height: 48px; }
+  .feature-icon svg, .feature-icon img { width: 38px; height: 38px; }
+
+  .mc-title { font-size: 11px; }
+  .mc-subtitle { font-size: 10px; }
+  .steps li { font-size: 17px; }
+  .about-text { font-size: 16px; }
+
+  .generate-btn { font-size: 12px; padding: 14px 24px; letter-spacing: 0.5px; }
+  .music-note { display: none; }
+  .music-note.n1, .music-note.n3 { display: block; }
+  .music-note.n1 { left:  calc(50% - 140px); top: 14px; }
+  .music-note.n3 { right: calc(50% - 140px); top: 14px; }
+
+  .content { padding: 16px 12px 36px; gap: 18px; }
+  .inline-row { flex-direction: column; }
+  .inline-row .mc-btn { width: 100%; }
+
+  .tracks-section { padding: 14px; }
+  .track { flex-wrap: wrap; }
+  .track-info { flex: 1 1 100%; order: 2; }
+}
+
+/* =============================================================
+   RESPONSIVE — very small
+   ============================================================= */
+@media (max-width: 380px) {
+  .brand-text { font-size: 9px; }
+  .mc-card { padding: 14px 12px; }
+  .generate-btn { font-size: 10px; padding: 12px 18px; }
 }

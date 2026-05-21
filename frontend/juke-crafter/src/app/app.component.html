@@ -1,106 +1,356 @@
-<main class="container">
-  <mat-toolbar color="primary" class="topbar">
-    <div class="topbar-left">
-      <img class="logo-disc" [src]="imageUrls.disc" alt="disc" />
-      <span class="app-title">{{ t('title') }}</span>
-    </div>
-    <div class="topbar-right">
-      <button mat-stroked-button (click)="toggleLanguage()">{{ currentLang==='pt' ? 'EN' : 'PT' }}</button>
-    </div>
-  </mat-toolbar>
+<div class="page">
 
-  <div style="padding:16px; max-width:1100px; margin:0 auto;">
-    <mat-card>
-      <mat-card-title>{{ t('title') }}</mat-card-title>
-      <mat-card-content>
-        <div class="grid">
-          <div style="flex:1 1 360px">
-            <div class="panel">
-              <h3>{{ t('createPlaylists') }}</h3>
-              <div class="panel-body">
-                <input class="text-input" placeholder="{{ t('nameAddon') }}" [(ngModel)]="nomeAddon" />
-                <div class="playlist-box">
-                  <input placeholder="Playlist Name" #plname />
-                  <button mat-stroked-button (click)="addPlaylist();">{{ t('addPlaylist') }}</button>
-                </div>
-                <div class="drag-here">{{ t('dragHere') }}</div>
-              </div>
-            </div>
+  <!-- ============ TOPBAR ============ -->
+  <header class="topbar">
+    <a class="brand" href="#">
+      <span class="brand-cube" aria-hidden="true">
+        <img *ngIf="useCustomImages" [src]="imageUrls.logo" alt="logo" class="brand-cube-img" />
+        <svg *ngIf="!useCustomImages" viewBox="0 0 64 64" width="44" height="44">
+          <defs>
+            <linearGradient id="cg1" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#ff5ec4"/>
+              <stop offset="0.5" stop-color="#7c5cff"/>
+              <stop offset="1" stop-color="#3effb1"/>
+            </linearGradient>
+            <linearGradient id="cg2" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#ffd166"/>
+              <stop offset="1" stop-color="#ef476f"/>
+            </linearGradient>
+            <linearGradient id="cg3" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0" stop-color="#06d6a0"/>
+              <stop offset="1" stop-color="#118ab2"/>
+            </linearGradient>
+          </defs>
+          <polygon points="32,4 60,18 32,32 4,18" fill="url(#cg1)" stroke="#000" stroke-width="1.5"/>
+          <polygon points="4,18 4,46 32,60 32,32" fill="url(#cg2)" stroke="#000" stroke-width="1.5"/>
+          <polygon points="60,18 60,46 32,60 32,32" fill="url(#cg3)" stroke="#000" stroke-width="1.5"/>
+        </svg>
+      </span>
+      <span class="brand-text">{{ t('title') }}</span>
+    </a>
 
-            <div class="panel">
-              <h3>{{ t('browseFiles') }}</h3>
-              <div class="panel-body file-panel">
-                <img class="panel-icon" [src]="imageUrls.folder" alt="folder" />
-                <input type="file" multiple accept=".mp3,.ogg,.wav" (change)="onFileSelected($event)" />
-                <small class="note">{{ t('uploadNote') }}</small>
-              </div>
-            </div>
+    <button class="nav-toggle" (click)="navOpen = !navOpen" [attr.aria-expanded]="navOpen" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
 
-            <div class="panel">
-              <h3>{{ t('pasteYoutube') }}</h3>
-              <div class="panel-body">
-                <textarea rows="3" [(ngModel)]="youtubeLinksText" placeholder="https://youtube.com/...\nhttps://youtu.be/..."></textarea>
-                <div class="link-row">
-                  <label>{{ t('playlistForLinks') }}</label>
-                  <select [(ngModel)]="linkPlaylist">
-                    <option *ngFor="let p of playlists" [value]="p">{{p}}</option>
-                  </select>
-                  <button mat-flat-button color="primary" (click)="addYoutubeLink()">{{ t('addSong') }}</button>
-                </div>
-              </div>
-            </div>
+    <nav class="nav" [class.open]="navOpen">
+      <a href="#" class="nav-link active">{{ t('navHome') }}</a>
+      <a href="#" class="nav-link">{{ t('navMyAddons') }}</a>
+      <a href="#" class="nav-link">{{ t('navCommunity') }}</a>
+      <a href="#" class="nav-link">{{ t('navSupport') }}</a>
+      <button class="lang-btn" mat-ripple (click)="toggleLanguage()"
+              [matTooltip]="currentLang==='pt' ? 'Switch to English' : 'Mudar para Português'">
+        {{ currentLang==='pt' ? 'EN' : 'PT' }}
+      </button>
+    </nav>
+  </header>
 
-            <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
-              <div style="display:flex; gap:8px; align-items:center">
-                <label style="margin-right:8px">Playlist para os links</label>
-                <select [(ngModel)]="linkPlaylist">
-                  <option *ngFor="let p of playlists" [value]="p">{{p}}</option>
-                </select>
-                <button mat-flat-button color="primary" (click)="addYoutubeLink()">Adicionar link</button>
-              </div>
-            </div>
+  <!-- ============ MAIN CONTENT ============ -->
+  <main class="content">
 
-            <div style="margin-top:12px">
-              <h4>Playlists</h4>
-              <div style="display:flex; gap:8px; align-items:center">
-                <div class="chip-list">
-                  <span *ngFor="let p of playlists" style="display:inline-flex;align-items:center;background:#eee;padding:4px 8px;border-radius:16px;margin-right:6px">
-                    {{p}}
-                    <button style="background:none;border:none;margin-left:6px;cursor:pointer" (click)="removePlaylist(p)" *ngIf="p!=='Geral'">✕</button>
-                  </span>
-                </div>
-                <button mat-stroked-button (click)="addPlaylist()">+ Nova playlist</button>
-              </div>
-            </div>
+    <!-- About card -->
+    <section class="mc-card about-card">
+      <i class="mc-corner tl"></i><i class="mc-corner tr"></i>
+      <i class="mc-corner bl"></i><i class="mc-corner br"></i>
+      <h2 class="mc-title centered">{{ t('aboutTitle') }}</h2>
+      <div class="about-grid">
+        <div>
+          <h3 class="mc-subtitle">{{ t('howToUse') }}</h3>
+          <ul class="steps">
+            <li><span class="bullet b-green"></span>1. {{ t('createPlaylists') }}</li>
+            <li><span class="bullet b-red"></span>2. {{ t('uploadOrPaste') }}</li>
+            <li><span class="bullet b-yellow"></span>3. {{ t('nameTracks') }}</li>
+            <li><span class="bullet b-blue"></span>4. {{ t('clickGenerate') }}</li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="mc-subtitle">{{ t('howToInstall') }}</h3>
+          <p class="about-text">{{ t('installLine1') }}</p>
+          <p class="about-text">{{ t('installLine2') }}</p>
+        </div>
+      </div>
+    </section>
 
-            <div class="generate-area">
-              <button class="generate-btn" (click)="gerarAddon()" [disabled]="isCarregando || tracks.length===0">{{ t('generateAddon') }}</button>
-            </div>
+    <!-- 3 feature cards -->
+    <section class="cards-row">
+
+      <!-- Create Playlists -->
+      <div class="mc-card feature-card">
+        <i class="mc-corner tl"></i><i class="mc-corner tr"></i>
+        <i class="mc-corner bl"></i><i class="mc-corner br"></i>
+        <div class="feature-head">
+          <span class="feature-icon">
+            <img *ngIf="useCustomImages" [src]="imageUrls.disc" alt="disc" class="feature-img" />
+            <svg *ngIf="!useCustomImages" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
+              <circle cx="32" cy="32" r="30" fill="#0a0a0a" stroke="#1a1a1a" stroke-width="1"/>
+              <circle cx="32" cy="32" r="28" fill="none" stroke="#ec4899" stroke-width="2"/>
+              <circle cx="32" cy="32" r="24" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+              <circle cx="32" cy="32" r="20" fill="none" stroke="#06b6d4" stroke-width="2"/>
+              <circle cx="32" cy="32" r="16" fill="none" stroke="#10b981" stroke-width="2"/>
+              <circle cx="32" cy="32" r="12" fill="none" stroke="#facc15" stroke-width="2"/>
+              <circle cx="32" cy="32" r="8" fill="#22c55e"/>
+              <circle cx="32" cy="32" r="2" fill="#000"/>
+              <circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.4)"/>
+            </svg>
+          </span>
+          <h3 class="mc-title">{{ t('createPlaylists') }}</h3>
+        </div>
+        <div class="feature-body">
+          <input class="mc-input" placeholder="{{ t('nameAddon') }}" [(ngModel)]="nomeAddon" />
+          <div class="inline-row">
+            <input class="mc-input" placeholder="{{ t('playlistName') }}" #plname (keyup.enter)="addPlaylist(plname.value); plname.value=''" />
+            <button class="mc-btn mc-btn-sm" mat-ripple (click)="addPlaylist(plname.value); plname.value=''">
+              {{ t('addPlaylist') }}
+            </button>
           </div>
+          <div class="drag-zone">{{ t('dragHere') }}</div>
 
-          <div class="tracks-panel">
-            <h3>{{ t('playlists') }}</h3>
-            <div class="tracks-list">
-              <div class="track" *ngFor="let t of tracks">
-                <img class="track-icon" [src]="t.type==='file' ? imageUrls.disc : imageUrls.youtube" />
-                <div class="track-info">
-                  <div class="track-title">{{t.type==='file'? (t.filename || '(arquivo)') : t.url}}</div>
-                  <div class="track-playlist">{{'Playlist:'}} 
-                    <select [(ngModel)]="t.playlist" (change)="setPlaylistForTrack(t.id, $any($event.target).value)">
-                      <option *ngFor="let p of playlists" [value]="p">{{p}}</option>
-                    </select>
-                  </div>
-                </div>
-                <button mat-icon-button color="warn" (click)="removeTrack(t.id)">✕</button>
-              </div>
-            </div>
+          <div class="chip-list" *ngIf="playlists.length > 0">
+            <span class="chip" *ngFor="let p of playlists">
+              {{p}}
+              <button class="chip-x" *ngIf="p!=='Geral'" (click)="removePlaylist(p)" aria-label="Remove">✕</button>
+            </span>
           </div>
         </div>
-      </mat-card-content>
-    </mat-card>
-    <p style="text-align:center; margin-top:12px"><small>Frontend mínimo com Angular Material — conecta com backend FastAPI em <code>/api/build-addon</code>.</small></p>
-    <footer class="credits" style="text-align:center; margin-top:8px; font-size:12px; color:#bdbdbd">
-      Assets: <a href="https://kenney.nl/assets" target="_blank" rel="noopener">Kenney (CC0)</a> — thanks to Kenney for free assets.
-    </footer>
-  </div>
-</main>
+      </div>
+
+      <!-- Upload MP3s -->
+      <div class="mc-card feature-card">
+        <i class="mc-corner tl"></i><i class="mc-corner tr"></i>
+        <i class="mc-corner bl"></i><i class="mc-corner br"></i>
+        <div class="feature-head">
+          <span class="feature-icon">
+            <img *ngIf="useCustomImages" [src]="imageUrls.folder" alt="folder" class="feature-img" />
+            <svg *ngIf="!useCustomImages" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
+              <path d="M6 18 L6 52 L58 52 L58 22 L30 22 L26 16 L6 16 Z"
+                    fill="#f59e0b" stroke="#78350f" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M6 22 L58 22 L58 52 L6 52 Z"
+                    fill="#fbbf24" stroke="#78350f" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M32 28 L32 40 M26 35 L32 41 L38 35" stroke="#78350f" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <line x1="22" y1="45" x2="42" y2="45" stroke="#78350f" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h3 class="mc-title">{{ t('uploadMp3s') }}</h3>
+        </div>
+        <div class="feature-body">
+          <label class="mc-btn mc-btn-block" mat-ripple>
+            {{ t('browseFiles') }}
+            <input type="file" multiple accept=".mp3,.ogg,.wav" (change)="onFileSelected($event)" hidden />
+          </label>
+          <small class="note centered">{{ t('uploadNote') }}</small>
+        </div>
+      </div>
+
+      <!-- Paste YouTube -->
+      <div class="mc-card feature-card">
+        <i class="mc-corner tl"></i><i class="mc-corner tr"></i>
+        <i class="mc-corner bl"></i><i class="mc-corner br"></i>
+        <div class="feature-head">
+          <span class="feature-icon">
+            <img *ngIf="useCustomImages" [src]="imageUrls.youtube" alt="youtube" class="feature-img" />
+            <svg *ngIf="!useCustomImages" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
+              <rect x="4" y="14" width="56" height="36" rx="8" fill="#dc2626" stroke="#7f1d1d" stroke-width="2"/>
+              <polygon points="26,24 26,40 42,32" fill="#fff"/>
+            </svg>
+          </span>
+          <h3 class="mc-title">{{ t('pasteYoutube') }}</h3>
+        </div>
+        <div class="feature-body">
+          <div class="inline-row">
+            <input class="mc-input" placeholder="{{ t('youtubeUrl') }}" [(ngModel)]="youtubeLinksText"
+                   (keyup.enter)="addYoutubeLink()" />
+            <button class="mc-btn mc-btn-sm" mat-ripple (click)="addYoutubeLink()">{{ t('addSong') }}</button>
+          </div>
+          <select class="mc-input" [(ngModel)]="linkPlaylist">
+            <option *ngFor="let p of playlists" [value]="p">{{p}}</option>
+          </select>
+          <small class="note centered">{{ t('youtubeNote') }}</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tracks list (only when items exist) -->
+    <section class="mc-card tracks-section" *ngIf="tracks.length > 0">
+      <i class="mc-corner tl"></i><i class="mc-corner tr"></i>
+      <i class="mc-corner bl"></i><i class="mc-corner br"></i>
+      <h3 class="mc-title">{{ t('playlists') }} &amp; {{ t('tracks') }}</h3>
+      <div class="tracks-list">
+        <div class="track" *ngFor="let tk of tracks">
+          <span class="track-icon">
+            <ng-container *ngIf="tk.type==='file'; else ytSmall">
+              <img *ngIf="useCustomImages" [src]="imageUrls.disc" alt="disc" width="36" height="36" />
+              <svg *ngIf="!useCustomImages" viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
+                <circle cx="32" cy="32" r="30" fill="#0a0a0a"/>
+                <circle cx="32" cy="32" r="26" fill="none" stroke="#ec4899" stroke-width="2"/>
+                <circle cx="32" cy="32" r="20" fill="none" stroke="#06b6d4" stroke-width="2"/>
+                <circle cx="32" cy="32" r="14" fill="none" stroke="#facc15" stroke-width="2"/>
+                <circle cx="32" cy="32" r="7" fill="#22c55e"/>
+                <circle cx="32" cy="32" r="2" fill="#000"/>
+              </svg>
+            </ng-container>
+            <ng-template #ytSmall>
+              <img *ngIf="useCustomImages" [src]="imageUrls.youtube" alt="youtube" width="36" height="36" />
+              <svg *ngIf="!useCustomImages" viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
+                <rect x="4" y="14" width="56" height="36" rx="8" fill="#dc2626" stroke="#7f1d1d" stroke-width="2"/>
+                <polygon points="26,24 26,40 42,32" fill="#fff"/>
+              </svg>
+            </ng-template>
+          </span>
+          <div class="track-info">
+            <div class="track-title">{{ tk.type==='file' ? (tk.filename || '(arquivo)') : tk.url }}</div>
+            <div class="track-meta">
+              {{ t('playlists') }}:
+              <select class="mc-input mc-input-sm" [(ngModel)]="tk.playlist" (change)="setPlaylistForTrack(tk.id, $any($event.target).value)">
+                <option *ngFor="let p of playlists" [value]="p">{{p}}</option>
+              </select>
+            </div>
+          </div>
+          <button class="track-remove" mat-ripple (click)="removeTrack(tk.id)" aria-label="Remove">✕</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Generate button with pixel-art music notes and sparkles -->
+    <div class="generate-wrap">
+
+      <!-- Pixel sparkles (small "+" stars) — coexist with the notes -->
+      <span class="sparkle sp1" aria-hidden="true">
+        <svg viewBox="0 0 7 7" width="14" height="14" shape-rendering="crispEdges">
+          <rect x="3" y="0" width="1" height="7" fill="#FACC15"/>
+          <rect x="0" y="3" width="7" height="1" fill="#FACC15"/>
+          <rect x="3" y="3" width="1" height="1" fill="#FFFFFF"/>
+        </svg>
+      </span>
+      <span class="sparkle sp2" aria-hidden="true">
+        <svg viewBox="0 0 7 7" width="12" height="12" shape-rendering="crispEdges">
+          <rect x="3" y="0" width="1" height="7" fill="#38BDF8"/>
+          <rect x="0" y="3" width="7" height="1" fill="#38BDF8"/>
+          <rect x="3" y="3" width="1" height="1" fill="#FFFFFF"/>
+        </svg>
+      </span>
+      <span class="sparkle sp3" aria-hidden="true">
+        <svg viewBox="0 0 7 7" width="14" height="14" shape-rendering="crispEdges">
+          <rect x="3" y="0" width="1" height="7" fill="#FACC15"/>
+          <rect x="0" y="3" width="7" height="1" fill="#FACC15"/>
+          <rect x="3" y="3" width="1" height="1" fill="#FFFFFF"/>
+        </svg>
+      </span>
+      <span class="sparkle sp4" aria-hidden="true">
+        <svg viewBox="0 0 7 7" width="12" height="12" shape-rendering="crispEdges">
+          <rect x="3" y="0" width="1" height="7" fill="#F472B6"/>
+          <rect x="0" y="3" width="7" height="1" fill="#F472B6"/>
+          <rect x="3" y="3" width="1" height="1" fill="#FFFFFF"/>
+        </svg>
+      </span>
+      <span class="sparkle sp5" aria-hidden="true">
+        <svg viewBox="0 0 7 7" width="10" height="10" shape-rendering="crispEdges">
+          <rect x="3" y="0" width="1" height="7" fill="#FFFFFF"/>
+          <rect x="0" y="3" width="7" height="1" fill="#FFFFFF"/>
+        </svg>
+      </span>
+      <span class="sparkle sp6" aria-hidden="true">
+        <svg viewBox="0 0 7 7" width="10" height="10" shape-rendering="crispEdges">
+          <rect x="3" y="0" width="1" height="7" fill="#FFFFFF"/>
+          <rect x="0" y="3" width="7" height="1" fill="#FFFFFF"/>
+        </svg>
+      </span>
+
+      <!-- Note 1: yellow eighth note -->
+      <span class="music-note n1" aria-hidden="true">
+        <svg viewBox="0 0 18 24" width="28" height="38" shape-rendering="crispEdges">
+          <!-- outline -->
+          <rect x="1"  y="13" width="10" height="1" fill="#000"/>
+          <rect x="1"  y="20" width="10" height="1" fill="#000"/>
+          <rect x="0"  y="14" width="1"  height="6" fill="#000"/>
+          <rect x="11" y="14" width="1"  height="6" fill="#000"/>
+          <rect x="10" y="1"  width="3"  height="1" fill="#000"/>
+          <rect x="10" y="6"  width="3"  height="1" fill="#000"/>
+          <rect x="13" y="2"  width="1"  height="4" fill="#000"/>
+          <!-- fill -->
+          <rect x="2"  y="14" width="8"  height="6" fill="#FACC15"/>
+          <rect x="10" y="2"  width="2"  height="14" fill="#FACC15"/>
+          <rect x="12" y="2"  width="1"  height="4" fill="#FACC15"/>
+        </svg>
+      </span>
+      <!-- Note 2: cyan eighth note -->
+      <span class="music-note n2" aria-hidden="true">
+        <svg viewBox="0 0 18 24" width="22" height="30" shape-rendering="crispEdges">
+          <rect x="1"  y="13" width="10" height="1" fill="#000"/>
+          <rect x="1"  y="20" width="10" height="1" fill="#000"/>
+          <rect x="0"  y="14" width="1"  height="6" fill="#000"/>
+          <rect x="11" y="14" width="1"  height="6" fill="#000"/>
+          <rect x="10" y="1"  width="3"  height="1" fill="#000"/>
+          <rect x="10" y="6"  width="3"  height="1" fill="#000"/>
+          <rect x="13" y="2"  width="1"  height="4" fill="#000"/>
+          <rect x="2"  y="14" width="8"  height="6" fill="#38BDF8"/>
+          <rect x="10" y="2"  width="2"  height="14" fill="#38BDF8"/>
+          <rect x="12" y="2"  width="1"  height="4" fill="#38BDF8"/>
+        </svg>
+      </span>
+
+      <button class="generate-btn" mat-ripple (click)="gerarAddon()" [disabled]="isCarregando || tracks.length===0">
+        {{ isCarregando ? t('generating') : t('generateAddon') }}
+      </button>
+
+      <!-- Note 3: pink eighth note -->
+      <span class="music-note n3" aria-hidden="true">
+        <svg viewBox="0 0 18 24" width="26" height="34" shape-rendering="crispEdges">
+          <rect x="1"  y="13" width="10" height="1" fill="#000"/>
+          <rect x="1"  y="20" width="10" height="1" fill="#000"/>
+          <rect x="0"  y="14" width="1"  height="6" fill="#000"/>
+          <rect x="11" y="14" width="1"  height="6" fill="#000"/>
+          <rect x="10" y="1"  width="3"  height="1" fill="#000"/>
+          <rect x="10" y="6"  width="3"  height="1" fill="#000"/>
+          <rect x="13" y="2"  width="1"  height="4" fill="#000"/>
+          <rect x="2"  y="14" width="8"  height="6" fill="#F472B6"/>
+          <rect x="10" y="2"  width="2"  height="14" fill="#F472B6"/>
+          <rect x="12" y="2"  width="1"  height="4" fill="#F472B6"/>
+        </svg>
+      </span>
+      <!-- Note 4: green eighth note -->
+      <span class="music-note n4" aria-hidden="true">
+        <svg viewBox="0 0 18 24" width="22" height="30" shape-rendering="crispEdges">
+          <rect x="1"  y="13" width="10" height="1" fill="#000"/>
+          <rect x="1"  y="20" width="10" height="1" fill="#000"/>
+          <rect x="0"  y="14" width="1"  height="6" fill="#000"/>
+          <rect x="11" y="14" width="1"  height="6" fill="#000"/>
+          <rect x="10" y="1"  width="3"  height="1" fill="#000"/>
+          <rect x="10" y="6"  width="3"  height="1" fill="#000"/>
+          <rect x="13" y="2"  width="1"  height="4" fill="#000"/>
+          <rect x="2"  y="14" width="8"  height="6" fill="#4ADE80"/>
+          <rect x="10" y="2"  width="2"  height="14" fill="#4ADE80"/>
+          <rect x="12" y="2"  width="1"  height="4" fill="#4ADE80"/>
+        </svg>
+      </span>
+      <!-- Note 5: purple eighth note (top-center) -->
+      <span class="music-note n5" aria-hidden="true">
+        <svg viewBox="0 0 18 24" width="24" height="32" shape-rendering="crispEdges">
+          <rect x="1"  y="13" width="10" height="1" fill="#000"/>
+          <rect x="1"  y="20" width="10" height="1" fill="#000"/>
+          <rect x="0"  y="14" width="1"  height="6" fill="#000"/>
+          <rect x="11" y="14" width="1"  height="6" fill="#000"/>
+          <rect x="10" y="1"  width="3"  height="1" fill="#000"/>
+          <rect x="10" y="6"  width="3"  height="1" fill="#000"/>
+          <rect x="13" y="2"  width="1"  height="4" fill="#000"/>
+          <rect x="2"  y="14" width="8"  height="6" fill="#A78BFA"/>
+          <rect x="10" y="2"  width="2"  height="14" fill="#A78BFA"/>
+          <rect x="12" y="2"  width="1"  height="4" fill="#A78BFA"/>
+        </svg>
+      </span>
+    </div>
+
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <a class="footer-repo" href="https://github.com/SergioS0ares/bedrock-custom-jukebox"
+       target="_blank" rel="noopener">
+      github.com/SergioS0ares/bedrock-custom-jukebox
+    </a>
+    <span class="footer-sep">—</span>
+    <span>Assets:
+      <a href="https://kenney.nl/assets" target="_blank" rel="noopener">Kenney (CC0)</a>
+    </span>
+  </footer>
+</div>
