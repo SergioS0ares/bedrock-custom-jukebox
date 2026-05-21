@@ -1,0 +1,11 @@
+{
+  "name": "juke-crafter",
+  "version": "0.0.1",
+  "private": true,
+  "devDependencies": {
+    "piscina": "^5.1.4"
+  },
+  "dependencies": {
+    "zone.js": "^0.16.1"
+  }
+}

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -29,7 +29,7 @@ interface TrackMeta {
     MatButtonModule, MatSelectModule, MatListModule, MatIconModule, MatChipsModule]
 })
 export class AppComponent {
-  private http = inject(HttpClient);
+  constructor(private http: HttpClient) { if (typeof window !== 'undefined') this.loadTracks(); }
 
   nomeAddon = 'Meu_Pacote_De_Musicas';
   arquivosSelecionados: File[] = [];
@@ -46,10 +46,10 @@ export class AppComponent {
 
   // Default image URLs (can be replaced by any online pixel-art icons)
   imageUrls = {
-    disc: '/assets/icons/disc.svg',
-    folder: '/assets/icons/folder.svg',
-    youtube: '/assets/icons/youtube.svg',
-    generateBadge: '/assets/icons/check.svg'
+    disc: '/assets/icons/disc.png',
+    folder: '/assets/icons/folder.png',
+    youtube: '/assets/icons/youtube.png',
+    generateBadge: '/assets/icons/check.png'
   };
 
   // Translations
@@ -86,7 +86,7 @@ export class AppComponent {
     }
   };
 
-  constructor() { if (typeof window !== 'undefined') this.loadTracks(); }
+  
 
   onFileSelected(event: any) {
     const files: FileList = event.target.files;

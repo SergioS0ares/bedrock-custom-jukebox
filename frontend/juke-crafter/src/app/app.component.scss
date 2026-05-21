@@ -1,0 +1,39 @@
+:host { display:block; }
+.container { max-width:1200px; margin:16px auto; }
+
+/* Topbar */
+.topbar { background: #232323; color: #dfe6d8; box-shadow: 0 4px 0 rgba(0,0,0,0.6); border-bottom:4px solid #0a6b2e; }
+.topbar-left { display:flex; align-items:center; gap:12px; }
+.logo-disc { width:48px; height:48px; image-rendering: pixelated; }
+.app-title { font-weight:700; font-size:20px; color:#b6e6a0; text-shadow:2px 2px 0 rgba(0,0,0,0.8); }
+
+/* Panels & cards */
+mat-card { background: linear-gradient(180deg,#2b2b2b 0%, #1f1f1f 100%); border:6px solid #0e4f21; box-shadow: 6px 6px 0 rgba(0,0,0,0.8); }
+.grid { display:flex; gap:18px; align-items:flex-start; }
+.panel { background: linear-gradient(180deg,#26322a,#1b221a); border:4px solid #3b7b3f; padding:12px; margin-bottom:12px; box-shadow: inset 0 -6px 0 rgba(0,0,0,0.35); }
+.panel h3 { margin:0 0 8px 0; color:#dfe6d8; font-weight:700; text-shadow:1px 1px 0 rgba(0,0,0,0.6); }
+.panel-body { padding:8px; }
+.panel-icon { width:48px; height:48px; image-rendering: pixelated; margin-right:8px; }
+
+.text-input, textarea, select { width:100%; padding:8px; border:2px solid #4a7f45; background:#151815; color:#e6f7df; border-radius:4px; }
+.drag-here { border:2px dashed #4a7f45; padding:16px; text-align:center; color:#b6e6a0; margin-top:8px; }
+
+.tracks-panel { width:380px; background:linear-gradient(180deg,#2a2a2a,#181818); border:4px solid #3b7b3f; padding:12px; }
+.tracks-list { max-height:520px; overflow:auto; }
+.track { display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid rgba(255,255,255,0.03); }
+.track-icon { width:44px; height:44px; image-rendering: pixelated; }
+.track-title { font-weight:600; color:#f0f7e9; }
+.track-playlist select { width:auto; display:inline-block; margin-left:6px; }
+
+.generate-area { text-align:center; margin-top:12px; }
+.generate-btn { background: linear-gradient(180deg,#6cc24d,#3aa231); color:#072100; font-weight:900; padding:14px 30px; font-size:20px; border:6px solid #114b18; box-shadow: 6px 6px 0 rgba(0,0,0,0.6); border-radius:10px; cursor:pointer; }
+.generate-btn:disabled { opacity:0.6; cursor:not-allowed; }
+
+/* Footer */
+.credits a { color:#bde9a6; text-decoration:underline; }
+
+/* Small screens */
+@media (max-width: 980px) {
+  .grid { flex-direction:column; }
+  .tracks-panel { width:100%; }
+}
