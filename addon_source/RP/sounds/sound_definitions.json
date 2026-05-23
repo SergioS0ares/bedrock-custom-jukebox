@@ -1,37 +1,37 @@
 {
     "format_version": "1.14.0",
     "sound_definitions": {
-        "custom.jukebox.grimm_hollow_knight_the_grimm_troupe__christopher_larkin_youtube": {
+        "custom.jukebox.musica_2": {
             "category": "record",
             "min_distance": 4.0,
             "max_distance": 64.0,
             "sounds": [
                 {
-                    "name": "sounds/jukebox/grimm_hollow_knight_the_grimm_troupe__christopher_larkin_youtube",
+                    "name": "sounds/jukebox/musica_2",
                     "stream": true,
                     "load_on_low_memory": true
                 }
             ]
         },
-        "custom.jukebox.mc_orsen__warning_speed_up_extended_mix__bass_boosted__rocky_tiktok_edit__olderbrotheradvice_youtube": {
+        "custom.jukebox.sabo_musica_1": {
             "category": "record",
             "min_distance": 4.0,
             "max_distance": 64.0,
             "sounds": [
                 {
-                    "name": "sounds/jukebox/mc_orsen__warning_speed_up_extended_mix__bass_boosted__rocky_tiktok_edit__olderbrotheradvice_youtube",
+                    "name": "sounds/jukebox/sabo_musica_1",
                     "stream": true,
                     "load_on_low_memory": true
                 }
             ]
         },
-        "custom.jukebox.musica1": {
+        "custom.jukebox.sabugo_musica_3": {
             "category": "record",
             "min_distance": 4.0,
             "max_distance": 64.0,
             "sounds": [
                 {
-                    "name": "sounds/jukebox/musica1",
+                    "name": "sounds/jukebox/sabugo_musica_3",
                     "stream": true,
                     "load_on_low_memory": true
                 }

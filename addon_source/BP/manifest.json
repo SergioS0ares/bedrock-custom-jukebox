@@ -1,9 +1,9 @@
 {
     "format_version": 2,
     "header": {
-        "name": "Music Player BP",
-        "description": "V5 Fixed Icons",
-        "uuid": "ab70c912-ba5e-4617-b3e4-09d0e85e9e13",
+        "name": "Vitrola BP",
+        "description": "Custom jukebox addon with playlists and global broadcast.",
+        "uuid": "b516e996-662c-424d-a512-b98f249a136f",
         "version": [
             1,
             0,
@@ -18,7 +18,7 @@
     "modules": [
         {
             "type": "data",
-            "uuid": "e1ae4582-2b1e-49bc-adfb-02c96275c69c",
+            "uuid": "b4ac9a82-ce50-423f-b7aa-7a159aca6298",
             "version": [
                 1,
                 0,
@@ -28,7 +28,7 @@
         {
             "type": "script",
             "language": "javascript",
-            "uuid": "2bf438e8-8a96-46a1-8a85-e2ae03344c8d",
+            "uuid": "1826bbdb-1e42-4b16-821c-8e87d61f061c",
             "version": [
                 1,
                 0,
@@ -47,7 +47,7 @@
             "version": "1.2.0"
         },
         {
-            "uuid": "400aab9d-a75c-4657-828e-1b45cb75c392",
+            "uuid": "a34038bf-bd13-48c0-9dab-df56db9d369c",
             "version": [
                 1,
                 0,

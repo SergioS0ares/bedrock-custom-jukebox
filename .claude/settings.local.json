@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(findstr -i ffmpeg)",
+      "Bash(where.exe ffmpeg *)",
+      "Bash(where.exe ffprobe *)"
+    ]
+  }
+}

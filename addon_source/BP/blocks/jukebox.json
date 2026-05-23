@@ -15,7 +15,11 @@
             "minecraft:geometry": "minecraft:geometry.full_block",
             "minecraft:material_instances": {
                 "*": {
-                    "texture": "minha_jukebox_txt",
+                    "texture": "vitrola_side",
+                    "render_method": "opaque"
+                },
+                "up": {
+                    "texture": "vitrola_top",
                     "render_method": "opaque"
                 }
             },

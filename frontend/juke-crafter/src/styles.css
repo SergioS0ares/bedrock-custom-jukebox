@@ -1,14 +1,40 @@
 @import "@angular/material/prebuilt-themes/azure-blue.css";
 
+/* ==========================================================
+   Minecraftia — fonte fan-made mais próxima da do Minecraft.
+   Coloque o arquivo Minecraftia.ttf em src/assets/fonts/.
+   Veja src/assets/fonts/README.txt para instruções.
+   Se o arquivo não existir, o navegador usa o fallback abaixo
+   (Pixelify Sans), sem quebrar nada.
+   ========================================================== */
+@font-face {
+  font-family: 'Minecraftia';
+  src: url('/assets/fonts/Minecraftia-Regular.ttf') format('truetype'),
+       url('/assets/fonts/Minecraftia.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Minecraftia';
+  src: url('/assets/fonts/Minecraftia-Bold.ttf') format('truetype'),
+       url('/assets/fonts/Minecraftia-Regular.ttf') format('truetype'),
+       url('/assets/fonts/Minecraftia.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 html, body { height: 100%; margin: 0; padding: 0; }
 
 body {
   background: #0a0a0a;
   color: #e6e6e6;
-  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Minecraftia', 'Pixelify Sans', 'VT323', 'Press Start 2P', monospace;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: auto;
   overflow-x: hidden;
+  image-rendering: pixelated;
 }
 
 app-root { display: block; min-height: 100%; }

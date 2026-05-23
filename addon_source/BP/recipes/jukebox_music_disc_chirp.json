@@ -1,0 +1,38 @@
+{
+    "format_version": "1.21.0",
+    "minecraft:recipe_shaped": {
+        "description": {
+            "identifier": "meu_addon:custom_jukebox_recipe_music_disc_chirp"
+        },
+        "tags": [
+            "crafting_table"
+        ],
+        "pattern": [
+            "PDP",
+            "PJP",
+            "N N"
+        ],
+        "key": {
+            "P": {
+                "tag": "minecraft:planks"
+            },
+            "J": {
+                "item": "minecraft:jukebox"
+            },
+            "N": {
+                "item": "minecraft:iron_nugget"
+            },
+            "D": {
+                "item": "minecraft:music_disc_chirp"
+            }
+        },
+        "unlock": [
+            {
+                "context": "AlwaysUnlocked"
+            }
+        ],
+        "result": {
+            "item": "meu_addon:custom_jukebox"
+        }
+    }
+}

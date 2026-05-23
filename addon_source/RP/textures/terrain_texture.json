@@ -4,8 +4,11 @@
     "padding": 8,
     "num_mip_levels": 4,
     "texture_data": {
-        "minha_jukebox_txt": {
+        "vitrola_side": {
             "textures": "textures/blocks/jukebox_side"
+        },
+        "vitrola_top": {
+            "textures": "textures/blocks/jukebox_top"
         }
     }
 }

@@ -57,16 +57,21 @@
         <div>
           <h3 class="mc-subtitle">{{ t('howToUse') }}</h3>
           <ul class="steps">
-            <li><span class="bullet b-green"></span>1. {{ t('createPlaylists') }}</li>
-            <li><span class="bullet b-red"></span>2. {{ t('uploadOrPaste') }}</li>
-            <li><span class="bullet b-yellow"></span>3. {{ t('nameTracks') }}</li>
-            <li><span class="bullet b-blue"></span>4. {{ t('clickGenerate') }}</li>
+            <li><img class="step-disc" src="assets/icons/music_disc_lava_chicken.png" alt="" aria-hidden="true" />1. {{ t('createPlaylists') }}</li>
+            <li><img class="step-disc" src="assets/icons/music_disc_precipice.png" alt="" aria-hidden="true" />2. {{ t('uploadOrPaste') }}</li>
+            <li><img class="step-disc" src="assets/icons/music_disc_relic.png" alt="" aria-hidden="true" />3. {{ t('nameTracks') }}</li>
+            <li><img class="step-disc" src="assets/icons/music_disc_tears.png" alt="" aria-hidden="true" />4. {{ t('clickGenerate') }}</li>
           </ul>
         </div>
         <div>
           <h3 class="mc-subtitle">{{ t('howToInstall') }}</h3>
           <p class="about-text">{{ t('installLine1') }}</p>
           <p class="about-text">{{ t('installLine2') }}</p>
+          <h3 class="mc-subtitle recipe-subtitle">{{ t('recipeTitle') }}</h3>
+          <p class="about-text">{{ t('recipeLine') }}</p>
+          <pre class="recipe-grid">P D P
+P J P
+N . N</pre>
         </div>
       </div>
     </section>
@@ -103,10 +108,16 @@
               {{ t('addPlaylist') }}
             </button>
           </div>
-          <div class="drag-zone">{{ t('dragHere') }}</div>
+          <div class="drag-zone">{{ t('dragHereHint') }}</div>
 
           <div class="chip-list" *ngIf="playlists.length > 0">
-            <span class="chip" *ngFor="let p of playlists">
+            <span class="chip chip-droppable"
+                  *ngFor="let p of playlists"
+                  [class.drop-target]="draggedTrackId && dragOverPlaylist === p"
+                  [class.drop-armed]="draggedTrackId && dragOverPlaylist !== p"
+                  (dragover)="onChipDragOver($event, p)"
+                  (dragleave)="onChipDragLeave($event, p)"
+                  (drop)="onChipDrop($event, p)">
               {{p}}
               <button class="chip-x" *ngIf="p!=='Geral'" (click)="removePlaylist(p)" aria-label="Remove">✕</button>
             </span>
@@ -120,8 +131,7 @@
         <i class="mc-corner bl"></i><i class="mc-corner br"></i>
         <div class="feature-head">
           <span class="feature-icon">
-            <img *ngIf="useCustomImages" [src]="imageUrls.folder" alt="folder" class="feature-img" />
-            <svg *ngIf="!useCustomImages" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
+            <svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
               <path d="M6 18 L6 52 L58 52 L58 22 L30 22 L26 16 L6 16 Z"
                     fill="#f59e0b" stroke="#78350f" stroke-width="2" stroke-linejoin="round"/>
               <path d="M6 22 L58 22 L58 52 L6 52 Z"
@@ -133,11 +143,21 @@
           </span>
           <h3 class="mc-title">{{ t('uploadMp3s') }}</h3>
         </div>
-        <div class="feature-body">
-          <label class="mc-btn mc-btn-block" mat-ripple>
-            {{ t('browseFiles') }}
-            <input type="file" multiple accept=".mp3,.ogg,.wav" (change)="onFileSelected($event)" hidden />
-          </label>
+        <div class="feature-body upload-body"
+             [class.is-dragging]="isDragOver"
+             (dragover)="onDragOver($event)"
+             (dragenter)="onDragOver($event)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event)">
+          <div class="upload-zone">
+            <label class="mc-btn mc-btn-block" mat-ripple>
+              {{ t('browseFiles') }}
+              <input type="file" multiple
+                     accept="audio/*,.mp3,.ogg,.wav,.m4a,.flac,.aac,.opus,.wma"
+                     (change)="onFileSelected($event)" hidden />
+            </label>
+            <div class="upload-drop-hint">{{ t('dropHint') }}</div>
+          </div>
           <small class="note centered">{{ t('uploadNote') }}</small>
         </div>
       </div>
@@ -148,8 +168,7 @@
         <i class="mc-corner bl"></i><i class="mc-corner br"></i>
         <div class="feature-head">
           <span class="feature-icon">
-            <img *ngIf="useCustomImages" [src]="imageUrls.youtube" alt="youtube" class="feature-img" />
-            <svg *ngIf="!useCustomImages" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
+            <svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
               <rect x="4" y="14" width="56" height="36" rx="8" fill="#dc2626" stroke="#7f1d1d" stroke-width="2"/>
               <polygon points="26,24 26,40 42,32" fill="#fff"/>
             </svg>
@@ -176,7 +195,14 @@
       <i class="mc-corner bl"></i><i class="mc-corner br"></i>
       <h3 class="mc-title">{{ t('playlists') }} &amp; {{ t('tracks') }}</h3>
       <div class="tracks-list">
-        <div class="track" *ngFor="let tk of tracks">
+        <div class="track"
+             *ngFor="let tk of tracks"
+             draggable="true"
+             [class.is-dragging]="draggedTrackId === tk.id"
+             [class.needs-reupload]="tk.type === 'file' && !tk.file"
+             (dragstart)="onTrackDragStart($event, tk.id)"
+             (dragend)="onTrackDragEnd()">
+          <span class="track-drag-handle" aria-hidden="true">⋮⋮</span>
           <span class="track-icon">
             <ng-container *ngIf="tk.type==='file'; else ytSmall">
               <img *ngIf="useCustomImages" [src]="imageUrls.disc" alt="disc" width="36" height="36" />
@@ -190,15 +216,22 @@
               </svg>
             </ng-container>
             <ng-template #ytSmall>
-              <img *ngIf="useCustomImages" [src]="imageUrls.youtube" alt="youtube" width="36" height="36" />
-              <svg *ngIf="!useCustomImages" viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
+              <svg viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
                 <rect x="4" y="14" width="56" height="36" rx="8" fill="#dc2626" stroke="#7f1d1d" stroke-width="2"/>
                 <polygon points="26,24 26,40 42,32" fill="#fff"/>
               </svg>
             </ng-template>
           </span>
           <div class="track-info">
-            <div class="track-title">{{ tk.type==='file' ? (tk.filename || '(arquivo)') : tk.url }}</div>
+            <input class="mc-input mc-input-sm track-name-input"
+                   [(ngModel)]="tk.displayName"
+                   (blur)="saveTracks()"
+                   [placeholder]="tk.type === 'youtube' ? t('youtubeNamePlaceholder') : t('trackNamePlaceholder')" />
+            <div class="track-sub" *ngIf="tk.type === 'youtube'">{{ tk.url }}</div>
+            <div class="track-sub" *ngIf="tk.type === 'file' && tk.filename">
+              <span class="track-sub-label">{{ t('originalFile') }}:</span> {{ tk.filename }}
+              <span class="reupload-badge" *ngIf="!tk.file">⚠ {{ t('reuploadBadge') }}</span>
+            </div>
             <div class="track-meta">
               {{ t('playlists') }}:
               <select class="mc-input mc-input-sm" [(ngModel)]="tk.playlist" (change)="setPlaylistForTrack(tk.id, $any($event.target).value)">
@@ -210,6 +243,18 @@
         </div>
       </div>
     </section>
+
+    <!-- Error banner (shown only when something failed in the last build) -->
+    <div class="error-banner" *ngIf="lastError" role="alert">
+      <i class="mc-corner tl"></i><i class="mc-corner tr"></i>
+      <i class="mc-corner bl"></i><i class="mc-corner br"></i>
+      <div class="error-banner-icon" aria-hidden="true">!</div>
+      <div class="error-banner-body">
+        <div class="error-banner-title">{{ t('errorTitle') }}</div>
+        <div class="error-banner-msg">{{ lastError }}</div>
+      </div>
+      <button class="error-banner-close" mat-ripple (click)="dismissError()" [attr.aria-label]="t('errorDismiss')">✕</button>
+    </div>
 
     <!-- Generate button with pixel-art music notes and sparkles -->
     <div class="generate-wrap">
@@ -341,6 +386,46 @@
     </div>
 
   </main>
+
+  <!-- ============ BUILD PROGRESS MODAL (Minecraft "Carregando..." style) ============ -->
+  <div class="build-modal-backdrop" *ngIf="isCarregando" aria-modal="true" role="dialog">
+    <div class="mc-loading-dialog">
+      <!-- Title bar -->
+      <div class="mc-loading-title-bar">
+        <h2 class="mc-loading-title">{{ t('buildModalTitle') }}</h2>
+      </div>
+
+      <!-- Body: black panel with tip + progress bar -->
+      <div class="mc-loading-body">
+        <p class="mc-loading-tip">{{ currentTip }}</p>
+
+        <div class="mc-loading-phase">{{ phaseLabel() }}</div>
+
+        <!-- Segmented progress bar (Minecraft loading bar look) -->
+        <div class="mc-loading-bar" [class.indeterminate]="filledSegmentCount < 0">
+          <span class="mc-loading-seg"
+                *ngFor="let i of segments"
+                [class.filled]="i < filledSegmentCount"
+                [style.animation-delay]="(i * 0.04) + 's'"></span>
+        </div>
+
+        <div class="mc-loading-pct" *ngIf="buildProgress && buildProgress.pct !== null">
+          {{ buildProgress.pct }}%<span *ngIf="buildProgress.label"> · {{ buildProgress.label }}</span>
+        </div>
+
+        <!-- Collapsible details (log) -->
+        <button type="button" class="mc-loading-details-toggle" (click)="toggleLog()">
+          {{ showLog ? t('hideDetails') : t('showDetails') }}
+        </button>
+        <div class="mc-loading-log" *ngIf="showLog">
+          <div class="build-log-empty" *ngIf="buildLog.length === 0">…</div>
+          <div class="build-log-line" *ngFor="let l of buildLog">
+            <span class="build-log-ts">{{ l.ts }}</span> {{ l.msg }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ============ FOOTER ============ -->
   <footer class="footer">

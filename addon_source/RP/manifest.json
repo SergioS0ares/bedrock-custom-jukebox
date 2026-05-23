@@ -1,9 +1,9 @@
 {
     "format_version": 2,
     "header": {
-        "name": "Music Player RP",
-        "description": "V5 Fixed Icons",
-        "uuid": "400aab9d-a75c-4657-828e-1b45cb75c392",
+        "name": "Vitrola RP",
+        "description": "Textures + sounds for the custom jukebox.",
+        "uuid": "a34038bf-bd13-48c0-9dab-df56db9d369c",
         "version": [
             1,
             0,
@@ -18,7 +18,7 @@
     "modules": [
         {
             "type": "resources",
-            "uuid": "f5cbaa66-d3dc-4a4f-ab38-986f1bb51c15",
+            "uuid": "95af1b66-469c-481d-9610-44bc813c1c37",
             "version": [
                 1,
                 0,
