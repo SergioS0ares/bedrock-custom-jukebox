@@ -49,6 +49,37 @@ COMPONENT_ID = "meu_addon:jukebox_click"
 PLAYLISTS_INPUT_FILE = os.path.join(BASE_DIR, "_playlists_input.json")
 # Optional input: a PNG used as the block texture (all faces).
 BLOCK_TEXTURE_SOURCE = os.path.join(BASE_DIR, "images", "jukeboxColorida.png")
+# Stable UUIDs + monotonically increasing build counter. Minecraft uses
+# UUIDs to match packs across imports, so reusing them is what lets a
+# fresh .mcaddon REPLACE the old one (instead of installing alongside).
+ADDON_IDS_FILE = os.path.join(BASE_DIR, "_addon_uuids.json")
+
+
+def load_or_bump_addon_ids():
+    """Return stable UUIDs for BP/RP/modules and an incremented build
+    counter. First call creates the file; subsequent calls reuse the
+    same UUIDs and just bump the counter (so Minecraft sees a version
+    update on the same pack instead of treating it as a new install)."""
+    data = None
+    if os.path.exists(ADDON_IDS_FILE):
+        try:
+            with open(ADDON_IDS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            data = None
+    if not data:
+        data = {
+            "bp_header":     str(uuid.uuid4()),
+            "rp_header":     str(uuid.uuid4()),
+            "bp_data_mod":   str(uuid.uuid4()),
+            "bp_script_mod": str(uuid.uuid4()),
+            "rp_resource_mod": str(uuid.uuid4()),
+            "build_counter": 0,
+        }
+    data["build_counter"] = int(data.get("build_counter", 0)) + 1
+    with open(ADDON_IDS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    return data
 
 def criar_pasta_se_nao_existir(caminho):
     if not os.path.exists(caminho):
@@ -545,19 +576,30 @@ def gerar_arquivos_base():
 
     criar_pasta_se_nao_existir(os.path.join(PASTA_SOURCE, "RP", "textures", "jukebox_icons"))
 
-    # Manifests
-    uuid_bp, uuid_rp = str(uuid.uuid4()), str(uuid.uuid4())
+    # Stable UUIDs across builds + bumped version so Minecraft replaces
+    # the previously-installed pack instead of stacking another copy.
+    ids = load_or_bump_addon_ids()
+    build_num = ids["build_counter"]
+    version = [1, 0, build_num]
+    print(f"  pack UUIDs stable; build #{build_num} -> version {version}")
 
     bp_manifest = {
         "format_version": 2,
-        "header": { "name": "Vitrola BP", "description": "Custom jukebox addon with playlists and global broadcast.", "uuid": uuid_bp, "version": [1, 0, 0], "min_engine_version": [1, 21, 0] },
-        "modules": [ { "type": "data", "uuid": str(uuid.uuid4()), "version": [1, 0, 0] }, { "type": "script", "language": "javascript", "uuid": str(uuid.uuid4()), "version": [1, 0, 0], "entry": "scripts/main.js" } ],
-        "dependencies": [ { "module_name": "@minecraft/server", "version": "1.12.0" }, { "module_name": "@minecraft/server-ui", "version": "1.2.0" }, { "uuid": uuid_rp, "version": [1, 0, 0] } ]
+        "header": { "name": "Vitrola BP", "description": f"Custom jukebox addon with playlists and global broadcast. (build {build_num})", "uuid": ids["bp_header"], "version": version, "min_engine_version": [1, 21, 0] },
+        "modules": [
+            { "type": "data",   "uuid": ids["bp_data_mod"],   "version": version },
+            { "type": "script", "language": "javascript", "uuid": ids["bp_script_mod"], "version": version, "entry": "scripts/main.js" }
+        ],
+        "dependencies": [
+            { "module_name": "@minecraft/server",    "version": "1.12.0" },
+            { "module_name": "@minecraft/server-ui", "version": "1.2.0" },
+            { "uuid": ids["rp_header"], "version": version }
+        ]
     }
     rp_manifest = {
         "format_version": 2,
-        "header": { "name": "Vitrola RP", "description": "Textures + sounds for the custom jukebox.", "uuid": uuid_rp, "version": [1, 0, 0], "min_engine_version": [1, 21, 0] },
-        "modules": [ { "type": "resources", "uuid": str(uuid.uuid4()), "version": [1, 0, 0] } ]
+        "header": { "name": "Vitrola RP", "description": f"Textures + sounds for the custom jukebox. (build {build_num})", "uuid": ids["rp_header"], "version": version, "min_engine_version": [1, 21, 0] },
+        "modules": [ { "type": "resources", "uuid": ids["rp_resource_mod"], "version": version } ]
     }
 
     salvar_arquivo_seguro(os.path.join(PASTA_SOURCE, "BP", "manifest.json"), bp_manifest, is_json=True)
@@ -633,7 +675,10 @@ def gerar_recipe():
                     "N": { "item": "minecraft:iron_nugget" },
                     "D": { "item": disc }
                 },
-                "unlock": [ { "context": "AlwaysUnlocked" } ],
+                # Object form (not array) is what Bedrock's recipe book
+                # actually reads in 1.21+ — without this, the recipe still
+                # works in the grid but never shows up in "Criável".
+                "unlock": { "context": "AlwaysUnlocked" },
                 "result": { "item": MEU_BLOCO_ID }
             }
         }

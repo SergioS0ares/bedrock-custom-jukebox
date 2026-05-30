@@ -23,11 +23,71 @@ interface TrackMeta {
 export class AppComponent {
   constructor(private http: HttpClient, private snack: MatSnackBar) {
     if (typeof window !== 'undefined') {
+      this.loadPlaylists();   // restores chips from previous sessions
       this.loadTracks();
+      this.reconcileTrackPlaylists();  // orphan playlists -> Geral
       this.syncLangFromUrl();
-      window.addEventListener('popstate', () => this.syncLangFromUrl());
+      this.syncDefaultAddonName();
+      window.addEventListener('popstate', () => {
+        this.syncLangFromUrl();
+        this.syncDefaultAddonName();
+      });
       this.installGlobalDropGuard();
     }
+  }
+
+  /** Persist the chip list so it survives page reloads — without this,
+   *  `this.playlists` resets to ['Geral'] every refresh and tracks left
+   *  with old playlist names quietly leak playlists into future builds. */
+  private savePlaylists() {
+    try {
+      if (typeof window !== 'undefined' && (window as any).localStorage) {
+        localStorage.setItem('juke_playlists_v1', JSON.stringify(this.playlists));
+      }
+    } catch (e) { console.warn('Failed to save playlists', e); }
+  }
+
+  private loadPlaylists() {
+    try {
+      if (typeof window !== 'undefined' && (window as any).localStorage) {
+        const raw = localStorage.getItem('juke_playlists_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this.playlists = parsed.filter(p => typeof p === 'string');
+            if (!this.playlists.includes('Geral')) this.playlists.unshift('Geral');
+          }
+        }
+      }
+    } catch (e) { console.warn('Failed to load playlists', e); }
+  }
+
+  /** After loading from localStorage, drop tracks that reference playlists
+   *  no longer in the chip list — they'd otherwise resurrect deleted
+   *  playlists on the next build. */
+  private reconcileTrackPlaylists() {
+    let changed = false;
+    for (const t of this.tracks) {
+      if (!this.playlists.includes(t.playlist)) {
+        t.playlist = 'Geral';
+        changed = true;
+      }
+    }
+    if (changed) this.saveTracks();
+  }
+
+  /** Wipes every locally persisted bit (tracks + playlists + language) so
+   *  the user can start fresh after, e.g., importing the wrong addon. */
+  resetLocalState() {
+    if (typeof window === 'undefined' || !(window as any).localStorage) return;
+    if (!confirm(this.t('confirmReset'))) return;
+    localStorage.removeItem('juke_tracks_v1');
+    localStorage.removeItem('juke_playlists_v1');
+    this.tracks = [];
+    this.playlists = ['Geral'];
+    this.linkPlaylist = 'Geral';
+    this.dismissError();
+    this.toast(this.t('resetDone'));
   }
 
   /**
@@ -39,7 +99,7 @@ export class AppComponent {
     const prevent = (e: DragEvent) => {
       // Skip the guard if the drop target is one of our explicit zones.
       const target = e.target as HTMLElement | null;
-      if (target && target.closest && target.closest('.upload-body, .chip-droppable')) return;
+      if (target && target.closest && target.closest('.upload-body, .chip-droppable, .track')) return;
       e.preventDefault();
       e.stopPropagation();
     };
@@ -60,6 +120,7 @@ export class AppComponent {
   onTrackDragEnd() {
     this.draggedTrackId = null;
     this.dragOverPlaylist = null;
+    this.dropIndicatorTrackId = null;
   }
 
   onChipDragOver(event: DragEvent, playlist: string) {
@@ -72,6 +133,62 @@ export class AppComponent {
 
   onChipDragLeave(event: DragEvent, playlist: string) {
     if (this.dragOverPlaylist === playlist) this.dragOverPlaylist = null;
+  }
+
+  // ---------- Track-to-track drop (reorder within / across playlists) -
+  /** Whether the mouse is in the upper half of the target row. */
+  private dropPositionFor(event: DragEvent): 'above' | 'below' {
+    const el = event.currentTarget as HTMLElement;
+    const rect = el.getBoundingClientRect();
+    return event.clientY < rect.top + rect.height / 2 ? 'above' : 'below';
+  }
+
+  onTrackDragOver(event: DragEvent, targetTrackId: string) {
+    if (!this.draggedTrackId || this.draggedTrackId === targetTrackId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    this.dropIndicatorTrackId = targetTrackId;
+    this.dropIndicatorPosition = this.dropPositionFor(event);
+  }
+
+  onTrackDragLeave(event: DragEvent, targetTrackId: string) {
+    // Only clear when we leave the row entirely (entering a child still
+    // counts as inside, so we keep the indicator visible).
+    const related = event.relatedTarget as Node | null;
+    const current = event.currentTarget as Node | null;
+    if (!current || !related || !current.contains(related)) {
+      if (this.dropIndicatorTrackId === targetTrackId) {
+        this.dropIndicatorTrackId = null;
+      }
+    }
+  }
+
+  onTrackDrop(event: DragEvent, targetTrackId: string) {
+    event.preventDefault();
+    event.stopPropagation();
+    const sourceId = this.draggedTrackId;
+    const position = this.dropPositionFor(event);
+    this.draggedTrackId = null;
+    this.dragOverPlaylist = null;
+    this.dropIndicatorTrackId = null;
+    if (!sourceId || sourceId === targetTrackId) return;
+
+    const sourceIdx = this.tracks.findIndex(t => t.id === sourceId);
+    const targetIdx = this.tracks.findIndex(t => t.id === targetTrackId);
+    if (sourceIdx < 0 || targetIdx < 0) return;
+
+    const source = this.tracks[sourceIdx];
+    // Adopt the target's playlist so dragging across playlists also moves it.
+    source.playlist = this.tracks[targetIdx].playlist;
+
+    // Pull source out, re-find the target's index, then insert before or
+    // after the target based on where the mouse was released.
+    this.tracks.splice(sourceIdx, 1);
+    let newTargetIdx = this.tracks.findIndex(t => t.id === targetTrackId);
+    if (position === 'below') newTargetIdx += 1;
+    this.tracks.splice(newTargetIdx, 0, source);
+    this.saveTracks();
   }
 
   onChipDrop(event: DragEvent, playlist: string) {
@@ -108,10 +225,25 @@ export class AppComponent {
     window.history.pushState(null, '', target + window.location.search + window.location.hash);
   }
 
-  nomeAddon = 'Meu_Pacote_De_Musicas';
+  /** Defaults per language. If the user hasn't touched `nomeAddon`, we
+   *  swap it whenever they toggle the language so the downloaded file
+   *  name matches what's shown in the UI. */
+  private readonly DEFAULT_ADDON_NAMES = { pt: 'Meu_Pacote_De_Musicas', en: 'My_Music_Pack' };
+  nomeAddon = this.DEFAULT_ADDON_NAMES.en;
   arquivosSelecionados: File[] = [];
   playlists: string[] = ['Geral'];
   metadados: TrackMeta[] = [];
+
+  private isDefaultAddonName(): boolean {
+    return this.nomeAddon === this.DEFAULT_ADDON_NAMES.pt
+        || this.nomeAddon === this.DEFAULT_ADDON_NAMES.en;
+  }
+
+  private syncDefaultAddonName(): void {
+    if (this.isDefaultAddonName()) {
+      this.nomeAddon = this.DEFAULT_ADDON_NAMES[this.currentLang];
+    }
+  }
 
   /** One-time clean up of stored state that may contain case duplicates
    *  created before the case-insensitive dedup was added. */
@@ -158,11 +290,18 @@ export class AppComponent {
   currentLang: 'pt' | 'en' = 'en';
   navOpen = false;
   isDragOver = false;
-  lastError: string | null = null;
+  // Store the translation key + dynamic detail separately so the banner
+  // re-translates itself when the user toggles language after an error.
+  errorKey: string | null = null;
+  errorDetail: string | null = null;
   /** Set while the user is dragging a track around (HTML5 D&D). */
   draggedTrackId: string | null = null;
   /** Name of the playlist chip currently being hovered with a track. */
   dragOverPlaylist: string | null = null;
+  /** Visual hint for the drop position. When set, the track row of this id
+   *  shows a green bar above (insert before) or below (insert after). */
+  dropIndicatorTrackId: string | null = null;
+  dropIndicatorPosition: 'above' | 'below' = 'below';
 
   // ---------- Build progress modal state -------------
   buildLog: Array<{ ts: string; msg: string }> = [];
@@ -187,6 +326,31 @@ export class AppComponent {
     const list = (this.labels[this.currentLang] as any).tips || [];
     if (list.length === 0) return '';
     return list[this.currentTipIndex % list.length];
+  }
+
+  /** Playlists that actually have at least one track, in user-defined order.
+   *  Used to render one column-section per playlist in the Tracks list. */
+  get playlistsWithTracks(): string[] {
+    return this.playlists.filter(p => this.tracks.some(t => t.playlist === p));
+  }
+
+  /** Tracks belonging to a given playlist, preserving the order of
+   *  `this.tracks` (drag-to-reorder mutates that array). */
+  getTracksOf(playlist: string) {
+    return this.tracks.filter(t => t.playlist === playlist);
+  }
+
+  /** Read-only banner message that always reflects the current language. */
+  get lastError(): string | null {
+    if (!this.errorKey) return null;
+    const head = this.t(this.errorKey);
+    return this.errorDetail ? `${head}: ${this.errorDetail}` : head;
+  }
+
+  /** Sets the displayed error so it re-translates on toggleLanguage(). */
+  private setError(key: string | null, detail: string | null = null) {
+    this.errorKey = key;
+    this.errorDetail = detail;
   }
 
   // Image URLs — drop your custom PNGs into src/assets/icons/ to override.
@@ -228,6 +392,7 @@ export class AppComponent {
       dropHint: 'ou arraste arquivos de áudio aqui',
       noAudioInDrop: 'Nenhum arquivo de áudio reconhecido nos itens soltos.',
       someRejected: 'Alguns arquivos não-áudio foram ignorados.',
+      dropNoFile: 'O navegador não compartilhou o arquivo (acontece ao arrastar da bandeja de downloads). Use "Procurar Arquivos" ou arraste direto do Explorer.',
       playlistForLinks: 'Playlist para os links',
       playlists: 'Playlists',
       tracks: 'Faixas',
@@ -253,6 +418,9 @@ export class AppComponent {
       dragHereHint: 'Arraste uma faixa em cima de uma playlist para reatribuir.',
       reuploadNeeded: 'Reenvie estes MP3s (perdidos após recarregar a página)',
       reuploadBadge: 'Reenviar',
+      resetLocal: 'Limpar dados locais',
+      confirmReset: 'Apagar todas as faixas e playlists guardadas neste navegador?',
+      resetDone: 'Dados locais limpos.',
       buildModalTitle: 'Carregando...',
       buildPhaseStarting: 'Iniciando...',
       buildPhaseUploading: 'Salvando arquivos enviados...',
@@ -263,16 +431,16 @@ export class AppComponent {
       showDetails: 'Mostrar detalhes',
       hideDetails: 'Esconder detalhes',
       tips: [
-        'Você pode criar várias playlists clicando em "Adicionar Playlist".',
+        'Laranjas podem roubar seu ouro. Cuidado.',
+        'Vocês sabiam que tem mais avião no mar do que submarino no céu?',
+        'Não, a cadeira de plástico não é vanilla.',
+        'Cloud é o maior mentiroso da indústria.',
         'Arraste uma faixa em cima de uma playlist para mover entre elas.',
-        'O Music Player aparece no inventário do Modo Criativo após instalar.',
         'MP3, OGG, WAV, M4A e FLAC são suportados — o backend converte tudo pra .ogg.',
         'Renomeie a faixa antes de gerar para que o nome apareça bonito no jogo.',
         'Cole o link do YouTube e o backend baixa o áudio automaticamente.',
-        'É uma boa ideia organizar suas músicas por playlists temáticas.',
-        'O .mcaddon gerado é só dar duplo-clique e o Minecraft instala sozinho.',
         'Faixas longas podem demorar mais pra converter — o ffmpeg está trabalhando!',
-        'Os ícones das faixas podem ser personalizados colocando um .png com o mesmo nome do .mp3.'
+        'Toda Vitrola em modo Global toca a mesma música pra todo mundo do servidor.'
       ]
     },
     en: {
@@ -300,6 +468,7 @@ export class AppComponent {
       dropHint: 'or drag audio files here',
       noAudioInDrop: 'No audio files recognized in the dropped items.',
       someRejected: 'Some non-audio files were ignored.',
+      dropNoFile: 'The browser refused to share the file (happens when dragging from the download tray). Use "Browse Files" or drag straight from Explorer/Finder.',
       playlistForLinks: 'Playlist for links',
       playlists: 'Playlists',
       tracks: 'Tracks',
@@ -325,6 +494,9 @@ export class AppComponent {
       dragHereHint: 'Drag a track onto a playlist chip to reassign it.',
       reuploadNeeded: 'Please re-upload these MP3s (lost after page reload)',
       reuploadBadge: 'Re-upload',
+      resetLocal: 'Clear local data',
+      confirmReset: 'Erase every track and playlist stored in this browser?',
+      resetDone: 'Local data cleared.',
       buildModalTitle: 'Loading...',
       buildPhaseStarting: 'Starting...',
       buildPhaseUploading: 'Saving uploaded files...',
@@ -335,16 +507,16 @@ export class AppComponent {
       showDetails: 'Show details',
       hideDetails: 'Hide details',
       tips: [
-        'You can create multiple playlists by clicking "Add Playlist".',
+        'Oranges can steal your gold. Be careful.',
+        'Did you know there are more planes in the sea than submarines in the sky?',
+        'No, the plastic chair is not vanilla.',
+        'Cloud is the biggest liar in the industry.',
         'Drag a track onto a playlist chip to move it between playlists.',
-        'The Music Player appears in the Creative Inventory after install.',
         'MP3, OGG, WAV, M4A and FLAC are supported — backend converts everything to .ogg.',
         'Rename a track before generating so it shows up nicely in-game.',
         'Paste a YouTube link and the backend downloads the audio automatically.',
-        'Organising your songs into themed playlists is a good idea.',
-        'The generated .mcaddon just needs a double-click and Minecraft installs it.',
         'Long tracks take longer to convert — ffmpeg is working hard!',
-        'Custom track icons: drop a .png with the same name next to the .mp3.'
+        'A Vitrola in Global mode broadcasts the same track to everyone on the server.'
       ]
     }
   };
@@ -369,7 +541,19 @@ export class AppComponent {
       this.toast(this.t('noAudioInDrop'));
       return;
     }
+    let reattached = 0;
     for (const f of accepted) {
+      // If a previous session left an orphan track (file=null) with the
+      // same filename, reuse it so the user keeps their playlist + name
+      // assignments instead of getting a duplicate row.
+      const orphan = this.tracks.find(t =>
+        t.type === 'file' && !t.file && t.filename === f.name
+      );
+      if (orphan) {
+        orphan.file = f;
+        reattached++;
+        continue;
+      }
       const id = cryptoRandomId();
       this.tracks.push({
         id, type: 'file',
@@ -379,6 +563,16 @@ export class AppComponent {
       });
     }
     this.saveTracks();
+    // If a reupload satisfied the orphan banner, clear or shrink it.
+    if (reattached > 0 && this.errorKey === 'reuploadNeeded') {
+      const remaining = this.tracks.filter(t => t.type === 'file' && !t.file);
+      if (remaining.length === 0) {
+        this.setError(null);
+      } else {
+        this.setError('reuploadNeeded',
+          remaining.map(o => o.displayName || o.filename || '?').join(', '));
+      }
+    }
     if (rejected > 0) this.toast(this.t('someRejected'));
   }
 
@@ -404,8 +598,31 @@ export class AppComponent {
     event.preventDefault();
     event.stopPropagation();
     this.isDragOver = false;
-    const files = event.dataTransfer?.files;
-    if (files && files.length > 0) this.addFiles(files);
+
+    // Pull files from dataTransfer.files (Explorer/Finder drops); fall back
+    // to dataTransfer.items because some sources (e.g. Chrome/Edge download
+    // bar, in-page draggables) only populate `items` with kind:'file'.
+    const collected: File[] = [];
+    const dt = event.dataTransfer;
+    if (dt?.files && dt.files.length > 0) {
+      for (let i = 0; i < dt.files.length; i++) collected.push(dt.files[i]);
+    } else if (dt?.items) {
+      for (let i = 0; i < dt.items.length; i++) {
+        const it = dt.items[i];
+        if (it.kind === 'file') {
+          const f = it.getAsFile();
+          if (f) collected.push(f);
+        }
+      }
+    }
+    if (collected.length === 0) {
+      // Drag came from a source the browser refused to share — common when
+      // dragging out of a browser's download bar. Tell the user instead of
+      // silently doing nothing.
+      this.toast(this.t('dropNoFile'), 'OK', 6000);
+      return;
+    }
+    this.addFiles(collected);
   }
 
   addYoutubeLink() {
@@ -467,6 +684,7 @@ export class AppComponent {
     const lower = raw.toLowerCase();
     if (this.playlists.some(p => p.toLowerCase() === lower)) return;
     this.playlists.push(raw);
+    this.savePlaylists();
   }
 
   removePlaylist(name: string) {
@@ -475,6 +693,7 @@ export class AppComponent {
     // Reatribui tracks dessa playlist para Geral
     this.tracks.forEach(t => { if (t.playlist === name) t.playlist = 'Geral'; });
     this.saveTracks();
+    this.savePlaylists();
   }
 
   private toast(msg: string, action = 'OK', ms = 3500) {
@@ -491,13 +710,13 @@ export class AppComponent {
     const orphans = this.tracks.filter(t => t.type === 'file' && !t.file);
     if (orphans.length > 0) {
       const names = orphans.map(o => o.displayName || o.filename || '?').join(', ');
-      this.lastError = `${this.t('reuploadNeeded')}: ${names}`;
-      this.toast(this.lastError, 'OK', 9000);
+      this.setError('reuploadNeeded', names);
+      this.toast(this.lastError!, 'OK', 9000);
       return;
     }
 
     this.isCarregando = true;
-    this.lastError = null;
+    this.setError(null);
     this.buildLog = [];
     this.buildPhase = 'starting';
     this.buildProgress = null;
@@ -567,11 +786,8 @@ export class AppComponent {
         this.stopLogPolling();
         this.stopTipRotation();
         const serverMsg = await this.extractErrorMessage(err);
-        const full = serverMsg
-          ? `${this.t('generateError')} — ${serverMsg}`
-          : this.t('generateError');
-        this.lastError = full;
-        this.toast(full, 'OK', 9000);
+        this.setError('generateError', serverMsg || null);
+        this.toast(this.lastError!, 'OK', 9000);
         this.isCarregando = false;
       }
     });
@@ -621,7 +837,7 @@ export class AppComponent {
     });
   }
 
-  dismissError() { this.lastError = null; }
+  dismissError() { this.setError(null); }
 
   /** Maps the backend "phase" string to a user-facing translation key. */
   phaseLabel(): string {
@@ -669,6 +885,7 @@ export class AppComponent {
   toggleLanguage() {
     this.currentLang = this.currentLang === 'pt' ? 'en' : 'pt';
     this.pushLangToUrl(this.currentLang);
+    this.syncDefaultAddonName();
   }
 }
 

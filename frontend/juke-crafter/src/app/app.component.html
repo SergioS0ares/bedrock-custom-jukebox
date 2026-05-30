@@ -34,10 +34,6 @@
     </button>
 
     <nav class="nav" [class.open]="navOpen">
-      <a href="#" class="nav-link active">{{ t('navHome') }}</a>
-      <a href="#" class="nav-link">{{ t('navMyAddons') }}</a>
-      <a href="#" class="nav-link">{{ t('navCommunity') }}</a>
-      <a href="#" class="nav-link">{{ t('navSupport') }}</a>
       <button class="lang-btn" mat-ripple (click)="toggleLanguage()"
               [matTooltip]="currentLang==='pt' ? 'Switch to English' : 'Mudar para Português'">
         {{ currentLang==='pt' ? 'EN' : 'PT' }}
@@ -194,14 +190,24 @@ N . N</pre>
       <i class="mc-corner tl"></i><i class="mc-corner tr"></i>
       <i class="mc-corner bl"></i><i class="mc-corner br"></i>
       <h3 class="mc-title">{{ t('playlists') }} &amp; {{ t('tracks') }}</h3>
-      <div class="tracks-list">
+      <div class="playlist-group" *ngFor="let p of playlistsWithTracks">
+        <header class="playlist-group-header">
+          <span class="playlist-group-name">{{ p }}</span>
+          <span class="playlist-group-count">{{ getTracksOf(p).length }}</span>
+        </header>
+        <div class="tracks-list">
         <div class="track"
-             *ngFor="let tk of tracks"
+             *ngFor="let tk of getTracksOf(p)"
              draggable="true"
              [class.is-dragging]="draggedTrackId === tk.id"
              [class.needs-reupload]="tk.type === 'file' && !tk.file"
+             [class.drop-above]="dropIndicatorTrackId === tk.id && dropIndicatorPosition === 'above'"
+             [class.drop-below]="dropIndicatorTrackId === tk.id && dropIndicatorPosition === 'below'"
              (dragstart)="onTrackDragStart($event, tk.id)"
-             (dragend)="onTrackDragEnd()">
+             (dragend)="onTrackDragEnd()"
+             (dragover)="onTrackDragOver($event, tk.id)"
+             (dragleave)="onTrackDragLeave($event, tk.id)"
+             (drop)="onTrackDrop($event, tk.id)">
           <span class="track-drag-handle" aria-hidden="true">⋮⋮</span>
           <span class="track-icon">
             <ng-container *ngIf="tk.type==='file'; else ytSmall">
@@ -224,6 +230,7 @@ N . N</pre>
           </span>
           <div class="track-info">
             <input class="mc-input mc-input-sm track-name-input"
+                   draggable="false"
                    [(ngModel)]="tk.displayName"
                    (blur)="saveTracks()"
                    [placeholder]="tk.type === 'youtube' ? t('youtubeNamePlaceholder') : t('trackNamePlaceholder')" />
@@ -234,12 +241,13 @@ N . N</pre>
             </div>
             <div class="track-meta">
               {{ t('playlists') }}:
-              <select class="mc-input mc-input-sm" [(ngModel)]="tk.playlist" (change)="setPlaylistForTrack(tk.id, $any($event.target).value)">
+              <select class="mc-input mc-input-sm" draggable="false" [(ngModel)]="tk.playlist" (change)="setPlaylistForTrack(tk.id, $any($event.target).value)">
                 <option *ngFor="let p of playlists" [value]="p">{{p}}</option>
               </select>
             </div>
           </div>
-          <button class="track-remove" mat-ripple (click)="removeTrack(tk.id)" aria-label="Remove">✕</button>
+          <button class="track-remove" mat-ripple draggable="false" (click)="removeTrack(tk.id)" aria-label="Remove">✕</button>
+        </div>
         </div>
       </div>
     </section>
@@ -437,5 +445,7 @@ N . N</pre>
     <span>Assets:
       <a href="https://kenney.nl/assets" target="_blank" rel="noopener">Kenney (CC0)</a>
     </span>
+    <span class="footer-sep">—</span>
+    <button class="footer-reset" (click)="resetLocalState()">{{ t('resetLocal') }}</button>
   </footer>
 </div>
