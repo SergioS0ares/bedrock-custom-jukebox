@@ -5,6 +5,20 @@
 # Ignorar a pasta de build final (opcional, se não quiser versionar o executável do addon)
 build/
 
+# Estado local do builder (UUIDs estáveis do addon, lista de playlists, cache de áudio)
+_addon_uuids.json
+_playlists_input.json
+_audio_cache_/
+addon_source/
+*.mcaddon
+user_music/
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # Node and Angular dev folders
 node_modules/
 .angular/cache/
